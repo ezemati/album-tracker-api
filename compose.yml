@@ -1,0 +1,32 @@
+services:
+  album_tracker_api:
+    build: .
+    container_name: album_tracker_api
+    env_file:
+      - .env
+    networks:
+      - album_tracker_network
+    depends_on:
+      - album_tracker_db
+
+  album_tracker_db:
+    image: postgres:alpine
+    restart: no
+    ports:
+      - "5432:5432"
+    env_file:
+      - ".env"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - album_tracker_db_data:/var/lib/postgresql
+    networks:
+      - album_tracker_network
+
+volumes:
+  album_tracker_db_data:
+
+networks:
+  album_tracker_network:

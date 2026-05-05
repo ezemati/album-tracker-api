@@ -1,0 +1,17 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug AlbumTracker API",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.album_tracker_api.main",
+            "console": "integratedTerminal",
+            "preLaunchTask": "uv:sync",
+            "justMyCode": false
+        }
+    ]
+}
