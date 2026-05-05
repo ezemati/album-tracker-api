@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 
-from album_tracker_api.models.base import AlbumTrackerBase
+from .base import AlbumTrackerBase
 
 
 class User(AlbumTrackerBase):
