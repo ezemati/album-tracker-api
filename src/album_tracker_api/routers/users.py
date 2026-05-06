@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from album_tracker_api.dependencies.user import CurrentUserDep, get_current_user
-from album_tracker_api.schemas.base import BaseResponse
-from album_tracker_api.schemas.users.me import MeResponse
+from ..dependencies import CurrentUserDep, get_current_user
+from ..schemas import BaseResponse, MeResponse
 
 router = APIRouter(
     prefix="/users",

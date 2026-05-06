@@ -1,6 +1,4 @@
-from uuid import UUID
-
-from album_tracker_api.schemas.base import BaseSchema
+from ..base import BaseSchema
 
 
 class RegisterRequest(BaseSchema):
@@ -9,4 +7,4 @@ class RegisterRequest(BaseSchema):
 
 
 class RegisterResponse(BaseSchema):
-    user_id: UUID
+    user_id: str

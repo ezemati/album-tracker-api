@@ -1,15 +1,14 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from alembic import command, config
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from album_tracker_api.core.config import settings
-from album_tracker_api.core.project_root_path import get_project_root_path
+from alembic import command, config
 
-from .routers import admin, auth, health
+from .core import get_project_root_path, settings
+from .routers import admin_router, auth_router, health_router, users_router
 
 root_router = APIRouter()
 
@@ -28,10 +27,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(admin.router)
-app.include_router(auth.router)
-app.include_router(health.router)
 app.include_router(root_router)
+app.include_router(admin_router)
+app.include_router(auth_router)
+app.include_router(health_router)
+app.include_router(users_router)
 
 
 app.add_middleware(

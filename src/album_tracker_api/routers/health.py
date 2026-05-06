@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
-from album_tracker_api.schemas.base import BaseResponse
-from album_tracker_api.schemas.health.healthcheck import HealthCheckResponse
+from ..schemas import BaseResponse, HealthCheckResponse
 
 router = APIRouter(
     prefix="/health",

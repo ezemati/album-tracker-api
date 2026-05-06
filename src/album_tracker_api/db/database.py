@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from album_tracker_api.core.config import settings
+from ..core import settings
 
 engine = create_async_engine(
     settings.db.connection_string,

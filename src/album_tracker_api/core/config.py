@@ -2,7 +2,7 @@ import pprint
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from album_tracker_api.schemas.base import BaseSchema
+from ..schemas import BaseSchema
 
 
 class JwtSettings(BaseSchema):

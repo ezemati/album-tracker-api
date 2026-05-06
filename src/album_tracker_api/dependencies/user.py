@@ -6,23 +6,15 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from album_tracker_api.core.config import settings
-from album_tracker_api.dependencies.db import SessionDep
-from album_tracker_api.models.user import User
-from album_tracker_api.schemas.auth.common import JwtFields
-from album_tracker_api.schemas.base import BaseSchema
+from ..core import settings
+from ..dependencies import SessionDep
+from ..models import User
+from ..schemas import JwtFields
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", refreshUrl="/auth/refresh")
 
 
-class TokenData(BaseSchema):
-    user_id: str
-
-
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    session: SessionDep,
-) -> User:
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -42,9 +34,7 @@ async def get_current_user(
 type CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
-async def get_current_admin_user(
-    user: CurrentUserDep,
-) -> User:
+async def get_current_admin_user(user: CurrentUserDep) -> User:
     if not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

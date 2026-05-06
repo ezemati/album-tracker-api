@@ -4,9 +4,9 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
-from album_tracker_api.core.config import settings
-from album_tracker_api.models.user import User
-from album_tracker_api.schemas.auth.common import JwtFields
+from ...core import settings
+from ...models import User
+from ...schemas import JwtFields
 
 password_hasher = PasswordHasher()
 
@@ -27,7 +27,7 @@ def create_access_token(user: User):
     exp_minutes = timedelta(minutes=settings.jwt.access_token_expire_minutes)
     exp = datetime.now(timezone.utc) + exp_minutes
     data = JwtFields(
-        sub=user.id,
+        sub=str(user.id),
         email=user.email,
         exp=exp,
         roles=["ADMIN"] if user.is_admin else [],

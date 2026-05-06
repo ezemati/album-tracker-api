@@ -1,4 +1,6 @@
-from album_tracker_api.schemas.base import BaseSchema
+from pydantic import BaseModel
+
+from ..base import BaseSchema
 
 
 class LoginRequest(BaseSchema):
@@ -6,7 +8,7 @@ class LoginRequest(BaseSchema):
     password: str
 
 
-class LoginResponse(BaseSchema):
+class LoginResponse(BaseModel):
     token_type: str = "bearer"
     access_token: str
     refresh_token: str

@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from album_tracker_api.dependencies.db import SessionDep
-from album_tracker_api.handlers.auth.utils import create_access_token, verify_password
-from album_tracker_api.models.user import User
-from album_tracker_api.schemas.auth.login import LoginResponse
+from ...dependencies import SessionDep
+from ...models import User
+from ...schemas import LoginResponse
+from .utils import create_access_token, verify_password
 
 
 class LoginHandler:

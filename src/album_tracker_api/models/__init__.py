@@ -1,2 +1,2 @@
-from .base import AlbumTrackerBase as AlbumTrackerBase
-from .user import User as User
+from .base import AlbumTrackerBase
+from .user import User

@@ -3,7 +3,7 @@ from typing import Annotated, Any, AsyncGenerator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from album_tracker_api.db.database import engine
+from ..db import engine
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, Any]:

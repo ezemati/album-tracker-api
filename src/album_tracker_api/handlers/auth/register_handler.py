@@ -2,10 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from album_tracker_api.dependencies.db import SessionDep
-from album_tracker_api.handlers.auth.utils import get_password_hash
-from album_tracker_api.models.user import User
-from album_tracker_api.schemas.auth.register import RegisterRequest, RegisterResponse
+from ...dependencies import SessionDep
+from ...models import User
+from ...schemas import RegisterRequest, RegisterResponse
+from .utils import get_password_hash
 
 
 class RegisterHandler:
@@ -25,4 +25,5 @@ class RegisterHandler:
         user = User(email=request.email, password_hash=get_password_hash(request.password))
         self.session.add(user)
         await self.session.commit()
-        return RegisterResponse(user_id=user.id)
+        await self.session.refresh(user)
+        return RegisterResponse(user_id=str(user.id))

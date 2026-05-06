@@ -1,4 +1,4 @@
-from album_tracker_api.schemas.base import BaseSchema
+from ..base import BaseSchema
 
 
 class HealthCheckResponse(BaseSchema):

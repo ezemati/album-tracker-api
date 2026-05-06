@@ -1,11 +1,10 @@
 from datetime import datetime
-from uuid import UUID
 
-from album_tracker_api.schemas.base import BaseSchema
+from ..base import BaseSchema
 
 
 class JwtFields(BaseSchema):
-    sub: UUID
+    sub: str
     email: str
     exp: datetime
     roles: list[str]

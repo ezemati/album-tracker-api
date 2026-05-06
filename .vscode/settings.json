@@ -7,5 +7,11 @@
         "**/Thumbs.db": true,
         "**/.venv": true,
         "**/__pycache__": true
-    }
+    },
+
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.unusedImports": "never",
+        }
+    },
 }
