@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from ..base import BaseSchema
 
 
@@ -7,4 +9,4 @@ class RegisterRequest(BaseSchema):
 
 
 class RegisterResponse(BaseSchema):
-    user_id: str
+    user_id: UUID

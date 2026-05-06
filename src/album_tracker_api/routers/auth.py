@@ -1,3 +1,4 @@
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
@@ -42,5 +43,5 @@ async def register(
     response = await handler.handle(request)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content=BaseResponse(data=response).model_dump(),
+        content=json.loads(BaseResponse(data=response).model_dump_json()),
     )

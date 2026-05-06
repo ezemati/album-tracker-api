@@ -1,3 +1,3 @@
 from .common import JwtFields
-from .login import LoginRequest, LoginResponse
+from .login import LoginResponse
 from .register import RegisterRequest, RegisterResponse

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -27,13 +28,13 @@ def create_access_token(user: User):
     exp_minutes = timedelta(minutes=settings.jwt.access_token_expire_minutes)
     exp = datetime.now(timezone.utc) + exp_minutes
     data = JwtFields(
-        sub=str(user.id),
+        sub=user.id,
         email=user.email,
         exp=exp,
         roles=["ADMIN"] if user.is_admin else [],
     )
     return jwt.encode(
-        data.model_dump(),
+        json.loads(data.model_dump_json()),
         settings.jwt.secret_key,
         settings.jwt.algorithm,
     )

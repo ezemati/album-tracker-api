@@ -1,13 +1,8 @@
 from pydantic import BaseModel
 
-from ..base import BaseSchema
 
-
-class LoginRequest(BaseSchema):
-    email: str
-    password: str
-
-
+# Use BaseModel and not BaseSchema since OAuth standard requires
+# snake_case fields
 class LoginResponse(BaseModel):
     token_type: str = "bearer"
     access_token: str

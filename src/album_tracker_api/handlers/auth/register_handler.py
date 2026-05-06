@@ -26,4 +26,4 @@ class RegisterHandler:
         self.session.add(user)
         await self.session.commit()
         await self.session.refresh(user)
-        return RegisterResponse(user_id=str(user.id))
+        return RegisterResponse(user_id=user.id)
