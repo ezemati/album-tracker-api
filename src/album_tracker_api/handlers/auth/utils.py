@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 import jwt
 from argon2 import PasswordHasher
@@ -24,17 +25,30 @@ def get_password_hash(plain_password: str):
     return password_hasher.hash(plain_password)
 
 
-def create_access_token(user: User):
-    exp_minutes = timedelta(minutes=settings.jwt.access_token_expire_minutes)
-    exp = datetime.now(timezone.utc) + exp_minutes
+def create_token(user: User, token_type: Literal["access", "refresh"]):
+    expire_minutes = (
+        settings.jwt.access_token_expire_minutes
+        if token_type == "access"
+        else settings.jwt.refresh_token_expire_minutes
+    )
+    exp = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     data = JwtFields(
-        sub=user.id,
+        sub=str(user.id),
         email=user.email,
         exp=exp,
+        token_type=token_type,
         roles=["ADMIN"] if user.is_admin else [],
     )
     return jwt.encode(
-        json.loads(data.model_dump_json()),
+        data.model_dump(),
         settings.jwt.secret_key,
         settings.jwt.algorithm,
     )
+
+
+def create_access_token(user: User):
+    return create_token(user, "access")
+
+
+def create_refresh_token(user: User):
+    return create_token(user, "refresh")

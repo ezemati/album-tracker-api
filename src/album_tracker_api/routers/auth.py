@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from ..handlers import LoginHandler, RegisterHandler
-from ..schemas import BaseResponse, LoginResponse, RegisterRequest, RegisterResponse
+from ..handlers import LoginHandler, RefreshHandler, RegisterHandler
+from ..schemas import BaseResponse, LoginResponse, RefreshRequest, RegisterRequest, RegisterResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,6 +22,20 @@ async def login(
     handler: Annotated[LoginHandler, Depends()],
 ) -> LoginResponse:
     response = await handler.handle(form_data)
+    return response
+
+
+@router.post(
+    "/refresh",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Invalid refresh token"},
+    },
+)
+async def refresh(
+    request: RefreshRequest,
+    handler: Annotated[RefreshHandler, Depends()],
+) -> LoginResponse:
+    response = await handler.handle(request)
     return response
 
 

@@ -26,3 +26,8 @@ build-backend = "uv_build"
 
 [tool.fastapi]
 entrypoint = "src.album_tracker_api.main:app"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+]

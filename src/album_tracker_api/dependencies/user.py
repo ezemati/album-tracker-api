@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -25,7 +26,10 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], sessio
         token_data = JwtFields.model_validate(payload)
     except jwt.InvalidTokenError, ValidationError:
         raise credentials_exception
-    user = (await session.scalars(select(User).where(User.id == token_data.sub))).first()
+    if token_data.token_type != "access":
+        raise credentials_exception
+    user_id = UUID(token_data.sub)
+    user = (await session.scalars(select(User).where(User.id == user_id))).first()
     if user is None:
         raise credentials_exception
     return user

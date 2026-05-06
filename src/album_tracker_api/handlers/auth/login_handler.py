@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...dependencies import SessionDep
 from ...models import User
 from ...schemas import LoginResponse
-from .utils import create_access_token, verify_password
+from .utils import create_access_token, create_refresh_token, verify_password
 
 
 class LoginHandler:
@@ -24,7 +24,7 @@ class LoginHandler:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password",
             )
-        return LoginResponse(access_token=create_access_token(user), refresh_token="fakerefreshtoken")
+        return LoginResponse(access_token=create_access_token(user), refresh_token=create_refresh_token(user))
 
     async def __authenticate_user(self, email: str, password: str) -> User | None:
         user = (await self.session.scalars(select(User).where(User.email == email))).first()
