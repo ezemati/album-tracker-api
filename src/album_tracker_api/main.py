@@ -10,7 +10,7 @@ from alembic import command, config
 
 from .core import get_project_root_path, settings
 from .db import engine
-from .routers import admin_router, auth_router, health_router, users_router
+from .routers import admin_router, albums_router, auth_router, collections_router, health_router, users_router
 
 root_router = APIRouter()
 
@@ -37,7 +37,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(root_router)
 app.include_router(admin_router)
+app.include_router(albums_router)
 app.include_router(auth_router)
+app.include_router(collections_router)
 app.include_router(health_router)
 app.include_router(users_router)
 
