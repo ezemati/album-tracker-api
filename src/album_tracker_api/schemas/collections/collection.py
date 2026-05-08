@@ -18,7 +18,6 @@ class UserCollectionSummaryResponse(BaseSchema):
 
 
 class UserCardResponse(BaseSchema):
-    id: UUID
     card: CardResponse
     quantity: int
     is_missing: bool
@@ -31,10 +30,8 @@ class UserCollectionDetailResponse(UserCollectionSummaryResponse):
 
 
 class AdjustCardQuantityRequest(BaseSchema):
-    user_card_id: UUID
     delta: int
 
 
 class SetCardQuantityRequest(BaseSchema):
-    user_card_id: UUID
     quantity: int = Field(ge=0)

@@ -7,13 +7,11 @@ from .card import CardResponse
 
 
 class AlbumSectionCreateRequest(BaseSchema):
-    album_id: UUID
     name: str
     order_index: int
 
 
 class AlbumSectionUpdateRequest(BaseSchema):
-    album_id: UUID | None = None
     name: str | None = None
     order_index: int | None = None
 

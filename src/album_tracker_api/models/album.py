@@ -22,6 +22,10 @@ class Album(AlbumTrackerBase):
     def get_all_cards(self) -> list[Card]:
         return [card for section in self.sections for card in section.cards]
 
+    def has_section_id(self, section_id: UUID) -> bool:
+        section_ids = set(s.id for s in self.sections)
+        return section_id in section_ids
+
 
 class AlbumSection(AlbumTrackerBase):
     __table_args__ = (UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),)
