@@ -17,6 +17,7 @@ class Album(AlbumTrackerBase):
         back_populates="album",
         cascade="all, delete-orphan",
         order_by="AlbumSection.order_index",
+        lazy="selectin",
     )
 
     def get_all_cards(self) -> list[Card]:
@@ -34,11 +35,12 @@ class AlbumSection(AlbumTrackerBase):
     name: Mapped[str] = mapped_column()
     order_index: Mapped[int] = mapped_column()
 
-    album: Mapped[Album] = relationship(back_populates="sections")
+    album: Mapped[Album] = relationship(back_populates="sections", lazy="joined")
     cards: Mapped[list[Card]] = relationship(
         back_populates="section",
         cascade="all, delete-orphan",
         order_by="Card.order_index",
+        lazy="selectin",
     )
 
 
@@ -54,4 +56,4 @@ class Card(AlbumTrackerBase):
     order_index: Mapped[int] = mapped_column()
     image_url: Mapped[str | None] = mapped_column(default=None)
 
-    section: Mapped[AlbumSection] = relationship(back_populates="cards")
+    section: Mapped[AlbumSection] = relationship(back_populates="cards", lazy="joined")
