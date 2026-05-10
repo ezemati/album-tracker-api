@@ -18,7 +18,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-config.set_main_option("sqlalchemy.url", settings.db.connection_string)
+config.set_main_option("sqlalchemy.url", settings.db.get_connection_string().render_as_string(hide_password=False))
 
 # add your model's MetaData object here for 'autogenerate' support
 target_metadata = models.AlbumTrackerBase.metadata

@@ -1,6 +1,7 @@
 import pprint
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 from ..schemas import BaseSchema
 
@@ -13,8 +14,15 @@ class JwtSettings(BaseSchema):
 
 
 class DbSettings(BaseSchema):
-    connection_string: str
+    user: str
+    password: str
+    host: str
+    port: int
+    database_name: str
     run_migrations_on_startup: bool = False
+
+    def get_connection_string(self) -> URL:
+        return URL.create("postgresql+asyncpg", self.user, self.password, self.host, self.port, self.database_name)
 
 
 class AlbumTrackerSettings(BaseSettings):
