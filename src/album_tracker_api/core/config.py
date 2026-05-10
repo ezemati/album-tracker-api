@@ -32,6 +32,7 @@ class AlbumTrackerSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
         env_file=[".env", ".env.dev", ".env.prod"],
+        extra="ignore",
     )
 
 
