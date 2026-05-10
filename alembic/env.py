@@ -72,8 +72,16 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = None
 
-    asyncio.run(run_async_migrations())
+    if loop is not None and loop.is_running():
+        # loop.run_until_complete(run_async_migrations())
+        loop.create_task(run_async_migrations())
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
