@@ -29,6 +29,10 @@ class UserCollectionDetailResponse(UserCollectionSummaryResponse):
     cards: list[UserCardResponse]
 
 
+class SubscribeToAlbumRequest(BaseSchema):
+    album_id: UUID
+
+
 class AdjustCardQuantityRequest(BaseSchema):
     delta: int
 

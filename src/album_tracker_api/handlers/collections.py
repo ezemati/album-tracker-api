@@ -2,7 +2,6 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..dependencies import SessionDep
@@ -12,6 +11,7 @@ from ..schemas import (
     AlbumSummaryResponse,
     CardResponse,
     SetCardQuantityRequest,
+    SubscribeToAlbumRequest,
     UserCardResponse,
     UserCollectionDetailResponse,
     UserCollectionSummaryResponse,
@@ -35,18 +35,18 @@ class UserCollectionHandler:
         ).all()
         return [await self.__build_summary(collection) for collection in user_collections]
 
-    async def subscribe(self, user: User, album_id: UUID) -> UserCollectionSummaryResponse:
+    async def subscribe(self, user: User, request: SubscribeToAlbumRequest) -> UserCollectionSummaryResponse:
         # ! Allow users to subscribe to the same Album more than once
         # ! (e.g. if they want to have two Collections of the same Album)
         # existing_user_collection = await self.__get_user_collection(user, album_id, required=False)
         # if existing_user_collection is not None:
         #     return await self.__build_summary(existing_user_collection)
 
-        album = (await self.session.scalars(select(Album).where(Album.id == album_id, Album.is_active))).first()
+        album = (await self.session.scalars(select(Album).where(Album.id == request.album_id, Album.is_active))).first()
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
 
-        user_collection = UserCollection(user_id=user.id, album_id=album_id)
+        user_collection = UserCollection(user_id=user.id, album_id=request.album_id)
         self.session.add(user_collection)
         await self.session.commit()
         await self.session.refresh(user_collection)

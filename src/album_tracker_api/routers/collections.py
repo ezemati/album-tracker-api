@@ -9,6 +9,7 @@ from ..schemas import (
     AdjustCardQuantityRequest,
     BaseResponse,
     SetCardQuantityRequest,
+    SubscribeToAlbumRequest,
     UserCardResponse,
     UserCollectionDetailResponse,
     UserCollectionSummaryResponse,
@@ -25,13 +26,13 @@ async def list_collections(
     return BaseResponse(data=await handler.list_collections(current_user))
 
 
-@router.post("/{album_id}")
+@router.post("/")
 async def subscribe(
-    album_id: UUID,
+    request: SubscribeToAlbumRequest,
     current_user: CurrentUserDep,
     handler: Annotated[UserCollectionHandler, Depends()],
 ) -> BaseResponse[UserCollectionSummaryResponse]:
-    return BaseResponse(data=await handler.subscribe(current_user, album_id))
+    return BaseResponse(data=await handler.subscribe(current_user, request))
 
 
 @router.delete("/{user_collection_id}")

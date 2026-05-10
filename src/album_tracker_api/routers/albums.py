@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from ..dependencies import CurrentAdminUserDep
+from ..dependencies import get_current_admin_user
 from ..handlers import AlbumAdminHandler, AlbumCatalogHandler
 from ..schemas import (
     AlbumCreateRequest,
@@ -36,101 +36,99 @@ async def get_album(
     return BaseResponse(data=await handler.get_album(album_id))
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_admin_user)])
 async def create_album(
     request: AlbumCreateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[AlbumSummaryResponse]:
     return BaseResponse(data=await handler.create_album(request))
 
 
-@router.patch("/{album_id}")
+@router.patch("/{album_id}", dependencies=[Depends(get_current_admin_user)])
 async def update_album(
     album_id: UUID,
     request: AlbumUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[AlbumSummaryResponse]:
     return BaseResponse(data=await handler.update_album(album_id, request))
 
 
-@router.delete("/{album_id}")
+@router.delete("/{album_id}", dependencies=[Depends(get_current_admin_user)])
 async def delete_album(
     album_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[bool]:
     return BaseResponse(data=await handler.delete_album(album_id))
 
 
-@router.post("/{album_id}/sections", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{album_id}/sections",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_admin_user)],
+)
 async def create_section(
     album_id: UUID,
     request: AlbumSectionCreateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[AlbumSectionResponse]:
     return BaseResponse(data=await handler.create_section(album_id, request))
 
 
-@router.patch("/{album_id}/sections/{section_id}")
+@router.patch("/{album_id}/sections/{section_id}", dependencies=[Depends(get_current_admin_user)])
 async def update_section(
-    _album_id: UUID,
+    album_id: UUID,
     section_id: UUID,
     request: AlbumSectionUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[AlbumSectionResponse]:
     return BaseResponse(data=await handler.update_section(section_id, request))
 
 
-@router.delete("/{album_id}/sections/{section_id}")
+@router.delete("/{album_id}/sections/{section_id}", dependencies=[Depends(get_current_admin_user)])
 async def delete_section(
-    _album_id: UUID,
+    album_id: UUID,
     section_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[bool]:
     return BaseResponse(data=await handler.delete_section(section_id))
 
 
-@router.post("/{album_id}/cards", status_code=status.HTTP_201_CREATED)
+@router.post("/{album_id}/cards", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_admin_user)])
 async def create_card(
     album_id: UUID,
     request: CardCreateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[CardResponse]:
     return BaseResponse(data=await handler.create_card(album_id, request))
 
 
-@router.post("/{album_id}/cards/bulk", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{album_id}/cards/bulk",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_admin_user)],
+)
 async def create_cards(
     album_id: UUID,
     request: BulkCardCreateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[list[CardResponse]]:
     return BaseResponse(data=await handler.create_cards(album_id, request))
 
 
-@router.patch("/{album_id}/cards/{card_id}")
+@router.patch("/{album_id}/cards/{card_id}", dependencies=[Depends(get_current_admin_user)])
 async def update_card(
-    _album_id: UUID,
+    album_id: UUID,
     card_id: UUID,
     request: CardUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[CardResponse]:
     return BaseResponse(data=await handler.update_card(card_id, request))
 
 
-@router.delete("/{album_id}/cards/{card_id}")
+@router.delete("/{album_id}/cards/{card_id}", dependencies=[Depends(get_current_admin_user)])
 async def delete_card(
-    _album_id: UUID,
+    album_id: UUID,
     card_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-    _admin: CurrentAdminUserDep,
 ) -> BaseResponse[bool]:
     return BaseResponse(data=await handler.delete_card(card_id))
