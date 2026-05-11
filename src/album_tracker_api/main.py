@@ -4,10 +4,12 @@ import uvicorn
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy import Connection
 
 from alembic import command, config
 
 from .core import get_project_root_path, settings
+from .db import engine
 from .routers import admin_router, auth_router, health_router, users_router
 
 root_router = APIRouter()
@@ -22,7 +24,13 @@ def get_root():
 async def lifespan(app: FastAPI):
     if settings.db.run_migrations_on_startup:
         alembic_cfg = config.Config(get_project_root_path() / "alembic.ini")
-        command.upgrade(alembic_cfg, "head")
+
+        def run_upgrade(connection: Connection):
+            alembic_cfg.attributes["connection"] = connection
+            command.upgrade(alembic_cfg, "head")
+
+        async with engine.begin() as connection:
+            await connection.run_sync(run_upgrade)
     yield
 
 

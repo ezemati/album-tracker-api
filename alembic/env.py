@@ -72,15 +72,13 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = None
+    connection = config.attributes.get("connection")
 
-    if loop is not None and loop.is_running():
-        # loop.run_until_complete(run_async_migrations())
-        loop.create_task(run_async_migrations())
+    if connection is not None:
+        # Alembic env.py was invoked from FastAPI Lifespan (on startup)
+        do_run_migrations(connection)
     else:
+        # env.py invoked through CLI (e.g. `alembic upgrade head`)
         asyncio.run(run_async_migrations())
 
 
