@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from ..handlers import LoginHandler, RefreshHandler, RegisterHandler
+from ..handlers import AuthHandler
 from ..schemas import BaseResponse, LoginResponse, RefreshRequest, RegisterRequest, RegisterResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,9 +19,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 )
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    handler: Annotated[LoginHandler, Depends()],
+    handler: Annotated[AuthHandler, Depends()],
 ) -> LoginResponse:
-    response = await handler.handle(form_data)
+    response = await handler.handle_login(form_data)
     return response
 
 
@@ -33,9 +33,9 @@ async def login(
 )
 async def refresh(
     request: RefreshRequest,
-    handler: Annotated[RefreshHandler, Depends()],
+    handler: Annotated[AuthHandler, Depends()],
 ) -> LoginResponse:
-    response = await handler.handle(request)
+    response = await handler.handle_refresh(request)
     return response
 
 
@@ -52,9 +52,9 @@ async def refresh(
 )
 async def register(
     request: RegisterRequest,
-    handler: Annotated[RegisterHandler, Depends()],
+    handler: Annotated[AuthHandler, Depends()],
 ) -> JSONResponse:
-    response = await handler.handle(request)
+    response = await handler.handle_register(request)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content=json.loads(BaseResponse(data=response).model_dump_json()),

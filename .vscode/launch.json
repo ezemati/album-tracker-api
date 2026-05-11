@@ -11,7 +11,9 @@
             "module": "src.album_tracker_api.main",
             "console": "integratedTerminal",
             "preLaunchTask": "uv:sync",
-            "justMyCode": false
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.vscode/.env.empty" // So that .env values aren't loaded as Environment Variables
         }
     ]
 }

@@ -11,6 +11,7 @@ class BaseSchema(BaseModel):
         validate_by_name=True,
         validate_by_alias=True,
         from_attributes=True,
+        json_schema_serialization_defaults_required=True,
     )
 
 
