@@ -12,14 +12,15 @@ from .user import User
 class UserCollection(AlbumTrackerBase):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), init=False)
 
-    user: Mapped[User] = relationship(lazy="joined")
-    album: Mapped[Album] = relationship(lazy="joined")
+    user: Mapped[User] = relationship(lazy="joined", init=False)
+    album: Mapped[Album] = relationship(lazy="joined", init=False)
     cards: Mapped[list[UserCard]] = relationship(
         back_populates="user_collection",
         cascade="all, delete-orphan",
         lazy="selectin",
+        init=False,
     )
 
 
@@ -33,5 +34,5 @@ class UserCard(AlbumTrackerBase):
     card_id: Mapped[UUID] = mapped_column(ForeignKey("card.id", ondelete="CASCADE"), index=True)
     quantity: Mapped[int] = mapped_column(default=0)
 
-    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="joined")
-    card: Mapped[Card] = relationship(lazy="joined")
+    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="joined", init=False)
+    card: Mapped[Card] = relationship(lazy="joined", init=False)
