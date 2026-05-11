@@ -30,4 +30,5 @@ entrypoint = "src.album_tracker_api.main:app"
 [dependency-groups]
 dev = [
     "ruff>=0.15.12",
+    "ty>=0.0.35",
 ]
