@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..core import settings
 from ..dependencies import SessionDep
 from ..models import User
-from ..schemas import JwtFields, LoginResponse, RefreshRequest, RegisterRequest, RegisterResponse
+from ..schemas import JwtFields, LoginResponse, MeResponse, RefreshRequest, RegisterRequest, RegisterResponse
 
 
 class AuthHandler:
@@ -35,6 +35,7 @@ class AuthHandler:
         return LoginResponse(
             access_token=self.__create_token(user, "access"),
             refresh_token=self.__create_token(user, "refresh"),
+            user=self.__create_user_info_response(user),
         )
 
     async def handle_register(self, request: RegisterRequest) -> RegisterResponse:
@@ -74,6 +75,7 @@ class AuthHandler:
         return LoginResponse(
             access_token=self.__create_token(user, "access"),
             refresh_token=self.__create_token(user, "refresh"),
+            user=self.__create_user_info_response(user),
         )
 
     async def __authenticate_user(self, email: str, password: str) -> User | None:
@@ -110,3 +112,6 @@ class AuthHandler:
             settings.jwt.secret_key,
             settings.jwt.algorithm,
         )
+
+    def __create_user_info_response(self, user: User) -> MeResponse:
+        return MeResponse(id=user.id, email=user.email)
