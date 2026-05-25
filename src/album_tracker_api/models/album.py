@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import AlbumTrackerBase
 
 
-class Album(AlbumTrackerBase):
+class Album(AlbumTrackerBase, kw_only=True):
     name: Mapped[str] = mapped_column()
     slug: Mapped[str] = mapped_column(unique=True, index=True)
     description: Mapped[str | None] = mapped_column(default=None)
@@ -18,6 +18,7 @@ class Album(AlbumTrackerBase):
         cascade="all, delete-orphan",
         order_by="AlbumSection.order_index",
         lazy="selectin",
+        init=False,
     )
 
     def get_all_cards(self) -> list[Card]:
@@ -28,23 +29,24 @@ class Album(AlbumTrackerBase):
         return section_id in section_ids
 
 
-class AlbumSection(AlbumTrackerBase):
+class AlbumSection(AlbumTrackerBase, kw_only=True):
     __table_args__ = (UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),)
 
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column()
     order_index: Mapped[int] = mapped_column()
 
-    album: Mapped[Album] = relationship(back_populates="sections", lazy="joined")
+    album: Mapped[Album] = relationship(back_populates="sections", lazy="joined", init=False)
     cards: Mapped[list[Card]] = relationship(
         back_populates="section",
         cascade="all, delete-orphan",
         order_by="Card.order_index",
         lazy="selectin",
+        init=False,
     )
 
 
-class Card(AlbumTrackerBase):
+class Card(AlbumTrackerBase, kw_only=True):
     __table_args__ = (
         UniqueConstraint("section_id", "code", name="uq_card_section_code"),
         UniqueConstraint("section_id", "order_index", name="uq_card_section_order"),
@@ -56,4 +58,4 @@ class Card(AlbumTrackerBase):
     order_index: Mapped[int] = mapped_column()
     image_url: Mapped[str | None] = mapped_column(default=None)
 
-    section: Mapped[AlbumSection] = relationship(back_populates="cards", lazy="joined")
+    section: Mapped[AlbumSection] = relationship(back_populates="cards", lazy="joined", init=False)
