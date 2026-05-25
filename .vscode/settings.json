@@ -6,12 +6,17 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         "**/.venv": true,
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "**/.ruff_cache": true
     },
-
     "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.codeActionsOnSave": {
             "source.unusedImports": "never",
-        }
+            "source.organizeImports.ruff": "explicit"
+        },
     },
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.autoImportCompletions": true,
+    "editor.formatOnSave": true
 }
