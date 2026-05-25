@@ -17,9 +17,9 @@ services:
     env_file:
       - ".env"
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB__USER}
+      POSTGRES_PASSWORD: ${DB__PASSWORD}
+      POSTGRES_DB: ${DB__DATABASE_NAME}
     volumes:
       - album_tracker_db_data:/var/lib/postgresql
     networks:

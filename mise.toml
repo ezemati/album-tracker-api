@@ -1,0 +1,18 @@
+[tools]
+python = "3.14"
+uv = "latest"
+
+[tasks]
+start = { run = "uv run fastapi dev --entrypoint album_tracker_api.main:app" }
+format = { run = "uv run ruff format ." }
+format-check = { run = "uv run ruff format --check ." }
+lint = { run = "uv run ruff check ." }
+typecheck = { run = "uv run ty check" }
+check = { depends = ["format-check", "lint", "typecheck"] }
+
+[tasks."alembic:generate"]
+usage = 'arg "<name>" help="Migration name"'
+run = 'uv run alembic revision --autogenerate -m "${usage_name:?}"'
+
+[tasks."alembic:migrate"]
+run = "uv run alembic upgrade head"
