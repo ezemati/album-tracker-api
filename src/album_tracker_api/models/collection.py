@@ -9,7 +9,7 @@ from .base import AlbumTrackerBase
 from .user import User
 
 
-class UserCollection(AlbumTrackerBase):
+class UserCollection(AlbumTrackerBase, kw_only=True):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), init=False)
@@ -24,7 +24,7 @@ class UserCollection(AlbumTrackerBase):
     )
 
 
-class UserCard(AlbumTrackerBase):
+class UserCard(AlbumTrackerBase, kw_only=True):
     __table_args__ = (
         UniqueConstraint("user_collection_id", "card_id", name="uq_user_collection_card"),
         CheckConstraint("quantity >= 0", name="ck_user_card_quantity_non_negative"),

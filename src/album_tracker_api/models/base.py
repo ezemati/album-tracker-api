@@ -14,10 +14,10 @@ class Base(AsyncAttrs, MappedAsDataclass, DeclarativeBase):
     pass
 
 
-class AlbumTrackerBase(Base):
+class AlbumTrackerBase(Base, kw_only=True):
     __abstract__ = True
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, init=False, default_factory=uuid7)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid7)
 
     @declared_attr.directive
     def __tablename__(cls) -> str:

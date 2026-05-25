@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import AlbumTrackerBase
 
 
-class Album(AlbumTrackerBase):
+class Album(AlbumTrackerBase, kw_only=True):
     name: Mapped[str] = mapped_column()
     slug: Mapped[str] = mapped_column(unique=True, index=True)
     description: Mapped[str | None] = mapped_column(default=None)
@@ -29,7 +29,7 @@ class Album(AlbumTrackerBase):
         return section_id in section_ids
 
 
-class AlbumSection(AlbumTrackerBase):
+class AlbumSection(AlbumTrackerBase, kw_only=True):
     __table_args__ = (UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),)
 
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
@@ -46,7 +46,7 @@ class AlbumSection(AlbumTrackerBase):
     )
 
 
-class Card(AlbumTrackerBase):
+class Card(AlbumTrackerBase, kw_only=True):
     __table_args__ = (
         UniqueConstraint("section_id", "code", name="uq_card_section_code"),
         UniqueConstraint("section_id", "order_index", name="uq_card_section_order"),
