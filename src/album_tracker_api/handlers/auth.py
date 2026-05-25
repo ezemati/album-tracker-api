@@ -16,14 +16,47 @@ from ..dependencies import SessionDep
 from ..models import User
 from ..schemas import JwtFields, LoginResponse, MeResponse, RefreshRequest, RegisterRequest, RegisterResponse
 
+password_hasher = PasswordHasher()
+
+
+def get_password_hash(password: str) -> str:
+    return password_hasher.hash(password)
+
+
+def verify_password(hashed_password: str, plain_password: str) -> bool:
+    try:
+        _ = password_hasher.verify(hashed_password, plain_password)
+        return True
+    except VerifyMismatchError:
+        return False
+
+
+def create_token(user: User, token_type: Literal["access", "refresh"]) -> str:
+    expire_minutes = (
+        settings.jwt.access_token_expire_minutes
+        if token_type == "access"
+        else settings.jwt.refresh_token_expire_minutes
+    )
+    exp = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
+    data = JwtFields(
+        sub=str(user.id),
+        email=user.email,
+        exp=exp,
+        token_type=token_type,
+        roles=["ADMIN"] if user.is_admin else [],
+    )
+    return jwt.encode(
+        data.model_dump(),
+        settings.jwt.secret_key,
+        settings.jwt.algorithm,
+    )
+
 
 class AuthHandler:
     session: AsyncSession
-    password_hasher: PasswordHasher
 
     def __init__(self, session: SessionDep) -> None:
         self.session = session
-        self.password_hasher = PasswordHasher()
 
     async def handle_login(self, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> LoginResponse:
         user = await self.__authenticate_user(form_data.username, form_data.password)
@@ -33,8 +66,8 @@ class AuthHandler:
                 detail="Invalid username or password",
             )
         return LoginResponse(
-            access_token=self.__create_token(user, "access"),
-            refresh_token=self.__create_token(user, "refresh"),
+            access_token=create_token(user, "access"),
+            refresh_token=create_token(user, "refresh"),
             user=self.__create_user_info_response(user),
         )
 
@@ -46,7 +79,7 @@ class AuthHandler:
                 detail="Username or email already exists",
             )
 
-        user = User(email=request.email, password_hash=self.password_hasher.hash(request.password))
+        user = User(email=request.email, password_hash=password_hasher.hash(request.password))
         self.session.add(user)
         await self.session.commit()
         await self.session.refresh(user)
@@ -73,8 +106,8 @@ class AuthHandler:
             raise credentials_exception
 
         return LoginResponse(
-            access_token=self.__create_token(user, "access"),
-            refresh_token=self.__create_token(user, "refresh"),
+            access_token=create_token(user, "access"),
+            refresh_token=create_token(user, "refresh"),
             user=self.__create_user_info_response(user),
         )
 
@@ -82,36 +115,9 @@ class AuthHandler:
         user = (await self.session.scalars(select(User).where(User.email == email))).first()
         if user is None:
             return None
-        if not self.__verify_password(user.password_hash, password):
+        if not verify_password(user.password_hash, password):
             return None
         return user
-
-    def __verify_password(self, hashed_password: str, plain_password: str) -> bool:
-        try:
-            _ = self.password_hasher.verify(hashed_password, plain_password)
-            return True
-        except VerifyMismatchError:
-            return False
-
-    def __create_token(self, user: User, token_type: Literal["access", "refresh"]) -> str:
-        expire_minutes = (
-            settings.jwt.access_token_expire_minutes
-            if token_type == "access"
-            else settings.jwt.refresh_token_expire_minutes
-        )
-        exp = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
-        data = JwtFields(
-            sub=str(user.id),
-            email=user.email,
-            exp=exp,
-            token_type=token_type,
-            roles=["ADMIN"] if user.is_admin else [],
-        )
-        return jwt.encode(
-            data.model_dump(),
-            settings.jwt.secret_key,
-            settings.jwt.algorithm,
-        )
 
     def __create_user_info_response(self, user: User) -> MeResponse:
         return MeResponse(id=user.id, email=user.email)
