@@ -16,8 +16,10 @@
 - SQLAlchemy is async (`create_async_engine`) and currently logs SQL with `echo=True`.
 - `AlbumTrackerBase` assigns UUIDv7 IDs and derives table names from class names; add new mapped models to `src/album_tracker_api/models/__init__.py` so Alembic autogenerate sees them.
 - Alembic reads the database URL from `settings.db.get_connection_string()` in `alembic/env.py`; CLI migration commands therefore require the same env vars as app startup.
-- `compose.yml` exposes Postgres on host port `5434` and reads the same `.env` file; account for the host/port difference when running the app locally against the Compose DB.
+- App startup runs `alembic upgrade head` only when `DB__RUN_MIGRATIONS_ON_STARTUP=true`; otherwise run `mise run alembic:migrate` yourself.
+- `compose.yml` reads `.env` for both services. Local app -> Compose DB needs `DB__HOST=localhost` and `DB__PORT=5434`; app container -> DB container needs `DB__HOST=album_tracker_db` and `DB__PORT=5432`.
 
 ## API Conventions
 - Pydantic schemas inherit from `BaseSchema`, which uses camelCase aliases, validates by field name and alias, and enables `from_attributes`.
+- `schemas/auth/login.py` intentionally uses plain `BaseModel`: OAuth token responses stay snake_case and are returned directly, not wrapped in `BaseResponse`.
 - Standard response wrappers use `BaseResponse[T]` from `schemas/base.py`.
