@@ -53,7 +53,7 @@ class UserCollectionHandler:
         return await self.__build_summary(user_collection)
 
     async def unsubscribe(self, user: User, user_collection_id: UUID) -> None:
-        user_collection = await self.__get_user_collection_or_none(user, user_collection_id)
+        user_collection = await self.__get_user_collection_or_raise(user, user_collection_id)
         await self.session.delete(user_collection)
         await self.session.commit()
 
@@ -169,7 +169,7 @@ class UserCollectionHandler:
                 .order_by(AlbumSection.order_index, Card.order_index)
             )
         ).all()
-        rows = [r.tuple() for r in rows]
+        rows = [r._tuple() for r in rows]
         return [self.__user_card_response(card, quantity) for card, quantity in rows]
 
     async def __build_summary(self, user_collection: UserCollection) -> UserCollectionSummaryResponse:
