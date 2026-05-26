@@ -33,7 +33,7 @@ async def create_album(
 ) -> Album:
     album = Album(name=name, slug=slug, description=description, year=year, is_active=is_active)
     session.add(album)
-    await session.flush()
+    await session.commit()
     return album
 
 
@@ -46,7 +46,7 @@ async def create_section(
 ) -> AlbumSection:
     section = AlbumSection(album_id=album.id, name=name, order_index=order_index)
     session.add(section)
-    await session.flush()
+    await session.commit()
     return section
 
 
@@ -61,7 +61,7 @@ async def create_card(
 ) -> Card:
     card = Card(section_id=section.id, code=code, name=name, order_index=order_index, image_url=image_url)
     session.add(card)
-    await session.flush()
+    await session.commit()
     return card
 
 

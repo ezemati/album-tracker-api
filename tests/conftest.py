@@ -21,7 +21,10 @@ def pg_container() -> Generator[PostgresContainer, None, None]:
 @pytest.fixture
 async def engine(pg_container: PostgresContainer) -> AsyncGenerator[AsyncEngine]:
     connection_url = pg_container.get_connection_url().replace("psycopg2", "asyncpg")  # Use AsyncEngine
-    engine = create_async_engine(connection_url, echo=True)
+    engine = create_async_engine(
+        connection_url,
+        # echo=True,
+    )
     try:
         async with engine.begin() as conn:
             await conn.run_sync(AlbumTrackerBase.metadata.create_all)
@@ -42,7 +45,11 @@ async def connection(engine: AsyncEngine) -> AsyncGenerator[AsyncConnection]:
 async def session(connection: AsyncConnection) -> AsyncGenerator[AsyncSession]:
     transaction = await connection.begin()
     try:
-        async with AsyncSession(bind=connection, join_transaction_mode="create_savepoint") as session:
+        async with AsyncSession(
+            bind=connection,
+            join_transaction_mode="create_savepoint",
+            expire_on_commit=False,
+        ) as session:
             yield session
     finally:
         # Rollback changes after every test (so that tests don't interfere with one another)
