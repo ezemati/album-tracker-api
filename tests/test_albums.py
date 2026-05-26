@@ -254,8 +254,8 @@ class TestDeleteAlbum:
 
         response = await admin_client.delete(f"/albums/{album_id}")
 
-        assert response.status_code == HTTPStatus.OK
-        assert response.json()["data"] is True
+        assert response.status_code == HTTPStatus.NO_CONTENT
+        assert response.content == b""
         assert await session.get(Album, album_id) is None
         assert await session.get(AlbumSection, section_id) is None
         assert await session.get(Card, card_id) is None
@@ -413,8 +413,8 @@ class TestDeleteSection:
 
         response = await admin_client.delete(f"/albums/{album.id}/sections/{section_id}")
 
-        assert response.status_code == HTTPStatus.OK
-        assert response.json()["data"] is True
+        assert response.status_code == HTTPStatus.NO_CONTENT
+        assert response.content == b""
         assert await session.get(AlbumSection, section_id) is None
         assert await session.get(Card, card_id) is None
 
@@ -775,8 +775,8 @@ class TestDeleteCard:
 
         response = await admin_client.delete(f"/albums/{album.id}/cards/{card.id}")
 
-        assert response.status_code == HTTPStatus.OK
-        assert response.json()["data"] is True
+        assert response.status_code == HTTPStatus.NO_CONTENT
+        assert response.content == b""
         assert await session.get(Card, card.id) is None
 
     async def test_delete_card_rejects_unknown_card(self, admin_client: AsyncClient, session: AsyncSession) -> None:

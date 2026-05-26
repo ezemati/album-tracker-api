@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 
 from ..dependencies import CurrentUserDep, get_current_user
 from ..handlers import UserCollectionHandler
@@ -35,13 +35,13 @@ async def subscribe(
     return BaseResponse(data=await handler.subscribe(current_user, request))
 
 
-@router.delete("/{user_collection_id}")
+@router.delete("/{user_collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unsubscribe(
     user_collection_id: UUID,
     current_user: CurrentUserDep,
     handler: Annotated[UserCollectionHandler, Depends()],
-) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.unsubscribe(current_user, user_collection_id))
+) -> None:
+    await handler.unsubscribe(current_user, user_collection_id)
 
 
 @router.get("/{user_collection_id}")

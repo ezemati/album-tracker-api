@@ -52,11 +52,10 @@ class UserCollectionHandler:
         await self.session.refresh(user_collection)
         return await self.__build_summary(user_collection)
 
-    async def unsubscribe(self, user: User, user_collection_id: UUID) -> bool:
+    async def unsubscribe(self, user: User, user_collection_id: UUID) -> None:
         user_collection = await self.__get_user_collection_or_none(user, user_collection_id)
         await self.session.delete(user_collection)
         await self.session.commit()
-        return True
 
     async def get_collection(self, user: User, user_collection_id: UUID) -> UserCollectionDetailResponse:
         user_collection = await self.__get_user_collection_or_raise(user, user_collection_id)

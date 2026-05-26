@@ -53,12 +53,16 @@ async def update_album(
     return BaseResponse(data=await handler.update_album(album_id, request))
 
 
-@router.delete("/{album_id}", dependencies=[Depends(get_current_admin_user)])
+@router.delete(
+    "/{album_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_admin_user)],
+)
 async def delete_album(
     album_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.delete_album(album_id))
+) -> None:
+    await handler.delete_album(album_id)
 
 
 @router.post(
@@ -84,13 +88,17 @@ async def update_section(
     return BaseResponse(data=await handler.update_section(album_id, section_id, request))
 
 
-@router.delete("/{album_id}/sections/{section_id}", dependencies=[Depends(get_current_admin_user)])
+@router.delete(
+    "/{album_id}/sections/{section_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_admin_user)],
+)
 async def delete_section(
     album_id: UUID,
     section_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.delete_section(album_id, section_id))
+) -> None:
+    await handler.delete_section(album_id, section_id)
 
 
 @router.post("/{album_id}/cards", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_admin_user)])
@@ -125,10 +133,14 @@ async def update_card(
     return BaseResponse(data=await handler.update_card(album_id, card_id, request))
 
 
-@router.delete("/{album_id}/cards/{card_id}", dependencies=[Depends(get_current_admin_user)])
+@router.delete(
+    "/{album_id}/cards/{card_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_admin_user)],
+)
 async def delete_card(
     album_id: UUID,
     card_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
-) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.delete_card(album_id, card_id))
+) -> None:
+    await handler.delete_card(album_id, card_id)

@@ -89,11 +89,10 @@ class AlbumAdminHandler:
         await self.session.refresh(album)
         return AlbumSummaryResponse.from_album(album)
 
-    async def delete_album(self, album_id: UUID) -> bool:
+    async def delete_album(self, album_id: UUID) -> None:
         album = await self.__get_album(album_id)
         await self.session.delete(album)
         await self.session.commit()
-        return True
 
     async def create_section(self, album_id: UUID, request: AlbumSectionCreateRequest) -> AlbumSectionResponse:
         _ = await self.__get_album(album_id)
@@ -115,11 +114,10 @@ class AlbumAdminHandler:
         await self.session.refresh(section)
         return self.__section_response(section)
 
-    async def delete_section(self, album_id: UUID, section_id: UUID) -> bool:
+    async def delete_section(self, album_id: UUID, section_id: UUID) -> None:
         section = await self.__get_section(album_id, section_id)
         await self.session.delete(section)
         await self.session.commit()
-        return True
 
     async def create_card(self, album_id: UUID, request: CardCreateRequest) -> CardResponse:
         album = await self.__get_album(album_id)
@@ -182,11 +180,10 @@ class AlbumAdminHandler:
         await self.session.refresh(card)
         return CardResponse.model_validate(card)
 
-    async def delete_card(self, album_id: UUID, card_id: UUID) -> bool:
+    async def delete_card(self, album_id: UUID, card_id: UUID) -> None:
         card = await self.__get_card(album_id, card_id)
         await self.session.delete(card)
         await self.session.commit()
-        return True
 
     async def __get_album(self, album_id: UUID) -> Album:
         album = (await self.session.scalars(select(Album).where(Album.id == album_id))).first()
