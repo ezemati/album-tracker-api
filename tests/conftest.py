@@ -1,9 +1,9 @@
-from typing import Any, AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from album_tracker_api.dependencies import get_current_user, get_db
@@ -22,21 +22,29 @@ def pg_container() -> Generator[PostgresContainer, None, None]:
 async def engine(pg_container: PostgresContainer) -> AsyncGenerator[AsyncEngine]:
     connection_url = pg_container.get_connection_url().replace("psycopg2", "asyncpg")  # Use AsyncEngine
     engine = create_async_engine(connection_url, echo=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(AlbumTrackerBase.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(AlbumTrackerBase.metadata.create_all)
         yield engine
-        await conn.run_sync(AlbumTrackerBase.metadata.drop_all)
-    await engine.dispose()
+    finally:
+        async with engine.begin() as conn:
+            await conn.run_sync(AlbumTrackerBase.metadata.drop_all)
+        await engine.dispose()
 
 
 @pytest.fixture
-async def session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
+async def connection(engine: AsyncEngine) -> AsyncGenerator[AsyncConnection]:
     async with engine.connect() as connection:
-        transaction = await connection.begin()
-        async with AsyncSession(bind=connection, join_transaction_mode="create_savepoint") as session:
-            yield session
-        # Rollback changes after every test (so that tests don't interfere with one another)
-        await transaction.rollback()
+        yield connection
+
+
+@pytest.fixture
+async def session(connection: AsyncConnection) -> AsyncGenerator[AsyncSession]:
+    transaction = await connection.begin()
+    async with AsyncSession(bind=connection, join_transaction_mode="create_savepoint") as session:
+        yield session
+    # Rollback changes after every test (so that tests don't interfere with one another)
+    await transaction.rollback()
 
 
 @pytest.fixture
@@ -58,27 +66,27 @@ def auth_token(test_user: User) -> str:
 
 
 @pytest.fixture
-async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[TestClient]:
-    def override_get_db():
+async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
+    async def override_get_db() -> AsyncGenerator[AsyncSession]:
         yield session
 
     app.dependency_overrides[get_db] = override_get_db
 
-    with TestClient(app) as test_client:
-        yield test_client
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
 
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def client(
-    unauthenticated_client: TestClient,
+async def client(
+    unauthenticated_client: AsyncClient,
     test_user: User,
     auth_token: str,
-) -> Generator[TestClient, Any, None]:
+) -> AsyncGenerator[AsyncClient]:
     authenticated_client = unauthenticated_client
 
-    def override_get_current_user():
+    async def override_get_current_user() -> User:
         return test_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
