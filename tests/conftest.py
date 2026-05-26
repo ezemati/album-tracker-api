@@ -6,7 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
-from album_tracker_api.dependencies import get_current_user, get_db
+from album_tracker_api.dependencies import get_db
 from album_tracker_api.handlers import create_token, get_password_hash
 from album_tracker_api.main import app
 from album_tracker_api.models import AlbumTrackerBase, User
@@ -41,10 +41,12 @@ async def connection(engine: AsyncEngine) -> AsyncGenerator[AsyncConnection]:
 @pytest.fixture
 async def session(connection: AsyncConnection) -> AsyncGenerator[AsyncSession]:
     transaction = await connection.begin()
-    async with AsyncSession(bind=connection, join_transaction_mode="create_savepoint") as session:
-        yield session
-    # Rollback changes after every test (so that tests don't interfere with one another)
-    await transaction.rollback()
+    try:
+        async with AsyncSession(bind=connection, join_transaction_mode="create_savepoint") as session:
+            yield session
+    finally:
+        # Rollback changes after every test (so that tests don't interfere with one another)
+        await transaction.rollback()
 
 
 @pytest.fixture
@@ -61,11 +63,6 @@ async def test_user(session: AsyncSession) -> User:
 
 
 @pytest.fixture
-def auth_token(test_user: User) -> str:
-    return create_token(test_user, "access")
-
-
-@pytest.fixture
 async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     async def override_get_db() -> AsyncGenerator[AsyncSession]:
         yield session
@@ -79,16 +76,8 @@ async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[AsyncC
 
 
 @pytest.fixture
-async def client(
-    unauthenticated_client: AsyncClient,
-    test_user: User,
-    auth_token: str,
-) -> AsyncGenerator[AsyncClient]:
+async def client(unauthenticated_client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient]:
     authenticated_client = unauthenticated_client
-
-    async def override_get_current_user() -> User:
-        return test_user
-
-    app.dependency_overrides[get_current_user] = override_get_current_user
-    authenticated_client.headers.update({"Authorization": f"Bearer {auth_token}"})
+    access_token = create_token(test_user, "access")
+    authenticated_client.headers["Authorization"] = f"Bearer {access_token}"
     yield authenticated_client
