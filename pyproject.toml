@@ -31,7 +31,23 @@ entrypoint = "src.album_tracker_api.main:app"
 dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
     "ruff>=0.15.12",
     "testcontainers[postgres]>=4.14.2",
     "ty>=0.0.39",
 ]
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["album_tracker_api"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "pragma: no cover",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_empty = true

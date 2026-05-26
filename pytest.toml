@@ -1,4 +1,11 @@
 [pytest]
 asyncio_mode = "auto"
-addopts = ["--import-mode=importlib"]
+addopts = [
+    "--import-mode=importlib",
+    "--cov=album_tracker_api",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
 strict = true
