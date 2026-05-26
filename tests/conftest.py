@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator, Generator
-from uuid import uuid4
+from uuid import uuid7
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -52,9 +52,23 @@ async def session(connection: AsyncConnection) -> AsyncGenerator[AsyncSession]:
 @pytest.fixture
 async def test_user(session: AsyncSession) -> User:
     user = User(
-        id=uuid4(),
+        id=uuid7(),
         email="testuser@example.com",
         password_hash=get_password_hash("testpassword"),
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+@pytest.fixture
+async def admin_user(session: AsyncSession) -> User:
+    user = User(
+        id=uuid7(),
+        email="admin@example.com",
+        password_hash=get_password_hash("adminpassword"),
+        is_admin=True,
     )
     session.add(user)
     await session.commit()
@@ -79,5 +93,13 @@ async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[AsyncC
 async def client(unauthenticated_client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient]:
     authenticated_client = unauthenticated_client
     access_token = create_token(test_user, "access")
+    authenticated_client.headers["Authorization"] = f"Bearer {access_token}"
+    yield authenticated_client
+
+
+@pytest.fixture
+async def admin_client(unauthenticated_client: AsyncClient, admin_user: User) -> AsyncGenerator[AsyncClient]:
+    authenticated_client = unauthenticated_client
+    access_token = create_token(admin_user, "access")
     authenticated_client.headers["Authorization"] = f"Bearer {access_token}"
     yield authenticated_client

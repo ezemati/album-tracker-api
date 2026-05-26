@@ -81,7 +81,7 @@ async def update_section(
     request: AlbumSectionUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
 ) -> BaseResponse[AlbumSectionResponse]:
-    return BaseResponse(data=await handler.update_section(section_id, request))
+    return BaseResponse(data=await handler.update_section(album_id, section_id, request))
 
 
 @router.delete("/{album_id}/sections/{section_id}", dependencies=[Depends(get_current_admin_user)])
@@ -90,7 +90,7 @@ async def delete_section(
     section_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
 ) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.delete_section(section_id))
+    return BaseResponse(data=await handler.delete_section(album_id, section_id))
 
 
 @router.post("/{album_id}/cards", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_admin_user)])
@@ -122,7 +122,7 @@ async def update_card(
     request: CardUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
 ) -> BaseResponse[CardResponse]:
-    return BaseResponse(data=await handler.update_card(card_id, request))
+    return BaseResponse(data=await handler.update_card(album_id, card_id, request))
 
 
 @router.delete("/{album_id}/cards/{card_id}", dependencies=[Depends(get_current_admin_user)])
@@ -131,4 +131,4 @@ async def delete_card(
     card_id: UUID,
     handler: Annotated[AlbumAdminHandler, Depends()],
 ) -> BaseResponse[bool]:
-    return BaseResponse(data=await handler.delete_card(card_id))
+    return BaseResponse(data=await handler.delete_card(album_id, card_id))
