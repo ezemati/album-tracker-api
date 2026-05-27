@@ -12,3 +12,8 @@ wheels/
 .env
 .env.dev
 .env.prod
+
+# Coverage reports
+.coverage*
+coverage.xml
+htmlcov/

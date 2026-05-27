@@ -57,5 +57,5 @@ async def register(
     response = await handler.handle_register(request)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content=json.loads(BaseResponse(data=response).model_dump_json()),
+        content=json.loads(BaseResponse(data=response).model_dump_json(by_alias=True)),
     )

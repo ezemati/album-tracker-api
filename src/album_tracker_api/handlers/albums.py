@@ -89,11 +89,10 @@ class AlbumAdminHandler:
         await self.session.refresh(album)
         return AlbumSummaryResponse.from_album(album)
 
-    async def delete_album(self, album_id: UUID) -> bool:
+    async def delete_album(self, album_id: UUID) -> None:
         album = await self.__get_album(album_id)
         await self.session.delete(album)
         await self.session.commit()
-        return True
 
     async def create_section(self, album_id: UUID, request: AlbumSectionCreateRequest) -> AlbumSectionResponse:
         _ = await self.__get_album(album_id)
@@ -103,18 +102,22 @@ class AlbumAdminHandler:
         await self.session.refresh(section)
         return self.__section_response(section)
 
-    async def update_section(self, section_id: UUID, request: AlbumSectionUpdateRequest) -> AlbumSectionResponse:
-        section = await self.__get_section(section_id)
+    async def update_section(
+        self,
+        album_id: UUID,
+        section_id: UUID,
+        request: AlbumSectionUpdateRequest,
+    ) -> AlbumSectionResponse:
+        section = await self.__get_section(album_id, section_id)
         self.__apply_updates(section, request)
         await self.__commit_or_conflict("Section order already exists in this album")
         await self.session.refresh(section)
         return self.__section_response(section)
 
-    async def delete_section(self, section_id: UUID) -> bool:
-        section = await self.__get_section(section_id)
+    async def delete_section(self, album_id: UUID, section_id: UUID) -> None:
+        section = await self.__get_section(album_id, section_id)
         await self.session.delete(section)
         await self.session.commit()
-        return True
 
     async def create_card(self, album_id: UUID, request: CardCreateRequest) -> CardResponse:
         album = await self.__get_album(album_id)
@@ -130,6 +133,7 @@ class AlbumAdminHandler:
         return CardResponse.model_validate(card)
 
     async def create_cards(self, album_id: UUID, request: BulkCardCreateRequest) -> list[CardResponse]:
+        _ = await self.__get_album(album_id)
         if len(request.cards) == 0:
             return []
 
@@ -156,25 +160,30 @@ class AlbumAdminHandler:
             await self.session.refresh(card)
         return [CardResponse.model_validate(card) for card in cards]
 
-    async def update_card(self, card_id: UUID, request: CardUpdateRequest) -> CardResponse:
-        card = await self.__get_card(card_id)
+    async def update_card(self, album_id: UUID, card_id: UUID, request: CardUpdateRequest) -> CardResponse:
+        card = await self.__get_card(album_id, card_id)
         if request.section_id is not None:
-            section_is_in_same_album = card.section.album.has_section_id(request.section_id)
-            if not section_is_in_same_album:
+            section_exists_in_album = (
+                await self.session.scalars(
+                    select(AlbumSection.id).where(
+                        AlbumSection.album_id == album_id, AlbumSection.id == request.section_id
+                    )
+                )
+            ).first()
+            if section_exists_in_album is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Section '{request.section_id}' isn't part of album {card.section.album.id}",
+                    detail=f"Section '{request.section_id}' isn't part of album {album_id}",
                 )
         self.__apply_updates(card, request)
         await self.__commit_or_conflict("Card data conflicts with an existing card")
         await self.session.refresh(card)
         return CardResponse.model_validate(card)
 
-    async def delete_card(self, card_id: UUID) -> bool:
-        card = await self.__get_card(card_id)
+    async def delete_card(self, album_id: UUID, card_id: UUID) -> None:
+        card = await self.__get_card(album_id, card_id)
         await self.session.delete(card)
         await self.session.commit()
-        return True
 
     async def __get_album(self, album_id: UUID) -> Album:
         album = (await self.session.scalars(select(Album).where(Album.id == album_id))).first()
@@ -182,14 +191,22 @@ class AlbumAdminHandler:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
 
-    async def __get_section(self, section_id: UUID) -> AlbumSection:
-        section = (await self.session.scalars(select(AlbumSection).where(AlbumSection.id == section_id))).first()
+    async def __get_section(self, album_id: UUID, section_id: UUID) -> AlbumSection:
+        section = (
+            await self.session.scalars(
+                select(AlbumSection).where(AlbumSection.album_id == album_id, AlbumSection.id == section_id)
+            )
+        ).first()
         if section is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
         return section
 
-    async def __get_card(self, card_id: UUID) -> Card:
-        card = (await self.session.scalars(select(Card).where(Card.id == card_id))).first()
+    async def __get_card(self, album_id: UUID, card_id: UUID) -> Card:
+        card = (
+            await self.session.scalars(
+                select(Card).join(AlbumSection).where(AlbumSection.album_id == album_id, Card.id == card_id)
+            )
+        ).first()
         if card is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
         return card

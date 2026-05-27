@@ -60,7 +60,13 @@ Format the code with:
 mise run format
 ```
 
-There is no test task yet; `tests/` currently only contains package scaffolding.
+Run tests with:
+
+```sh
+mise run test
+```
+
+Every pytest run includes application coverage for `album_tracker_api`, with line and branch coverage enabled. The terminal output shows missing lines, `htmlcov/index.html` provides an interactive HTML report, and `coverage.xml` is generated for CI or other reporting tools.
 
 ## Database Migrations
 
