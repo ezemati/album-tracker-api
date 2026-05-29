@@ -64,6 +64,7 @@ class AlbumCatalogHandler:
             id=section.id,
             album_id=section.album_id,
             name=section.name,
+            code=section.code,
             order_index=section.order_index,
             cards=[CardResponse.model_validate(card) for card in section.cards],
         )
@@ -216,6 +217,7 @@ class AlbumAdminHandler:
             id=section.id,
             album_id=section.album_id,
             name=section.name,
+            code=section.code,
             order_index=section.order_index,
             cards=[],
         )

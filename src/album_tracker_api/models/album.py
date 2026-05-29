@@ -52,11 +52,13 @@ class AlbumSection(AlbumTrackerBase, TimestampMixin, kw_only=True):
 
     __table_args__ = (
         UniqueConstraint("album_id", "name", name="uq_section_album_name"),
+        UniqueConstraint("album_id", "code", name="uq_section_album_code"),
         UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),
     )
 
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column()
+    code: Mapped[str] = mapped_column()
     order_index: Mapped[int] = mapped_column()
 
     album: Mapped[Album] = relationship(back_populates="sections", lazy="joined", init=False)

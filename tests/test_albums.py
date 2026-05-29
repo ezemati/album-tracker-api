@@ -44,7 +44,7 @@ async def create_section(
     name: str = "Base",
     order_index: int = 1,
 ) -> AlbumSection:
-    section = AlbumSection(album_id=album.id, name=name, order_index=order_index)
+    section = AlbumSection(album_id=album.id, name=name, code=name, order_index=order_index)
     session.add(section)
     await session.commit()
     return section
@@ -277,7 +277,7 @@ class TestDeleteAlbum:
 class TestCreateSection:
     async def test_create_section_creates_section(self, admin_client: AsyncClient, session: AsyncSession) -> None:
         album = await create_album(session)
-        request = AlbumSectionCreateRequest(name="Base", order_index=1)
+        request = AlbumSectionCreateRequest(name="Base", code="BAS", order_index=1)
 
         response = await admin_client.post(f"/albums/{album.id}/sections", json=as_json(request))
 
@@ -290,7 +290,7 @@ class TestCreateSection:
         assert section_response.cards == []
 
     async def test_create_section_rejects_unknown_album(self, admin_client: AsyncClient) -> None:
-        request = AlbumSectionCreateRequest(name="Base", order_index=1)
+        request = AlbumSectionCreateRequest(name="Base", code="BAS", order_index=1)
 
         response = await admin_client.post(f"/albums/{uuid7()}/sections", json=as_json(request))
 
@@ -304,7 +304,7 @@ class TestCreateSection:
     ) -> None:
         album = await create_album(session)
         await create_section(session, album, order_index=1)
-        request = AlbumSectionCreateRequest(name="Duplicate", order_index=1)
+        request = AlbumSectionCreateRequest(name="Duplicate", code="DUP", order_index=1)
 
         response = await admin_client.post(f"/albums/{album.id}/sections", json=as_json(request))
 
@@ -313,7 +313,7 @@ class TestCreateSection:
 
     async def test_create_section_rejects_non_admin_user(self, client: AsyncClient, session: AsyncSession) -> None:
         album = await create_album(session)
-        request = AlbumSectionCreateRequest(name="Base", order_index=1)
+        request = AlbumSectionCreateRequest(name="Base", code="BASE", order_index=1)
 
         response = await client.post(f"/albums/{album.id}/sections", json=as_json(request))
 
