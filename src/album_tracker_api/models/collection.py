@@ -1,18 +1,28 @@
-from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .album import Album, Card
-from .base import AlbumTrackerBase
+from .base import AlbumTrackerBase, TimestampMixin
 from .user import User
 
 
-class UserCollection(AlbumTrackerBase, kw_only=True):
+class UserCollection(AlbumTrackerBase, TimestampMixin, kw_only=True):
+    """
+    A user's personal collection for a specific album.
+
+    Example:
+    User John subscribes to FIFA World Cup 2026.
+    That creates one UserCollection for John and that Album.
+    """
+
+    __table_args__ = (
+        # UniqueConstraint("user_id", "album_id", name="uq_user_collection_album"),
+    )
+
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), init=False)
 
     user: Mapped[User] = relationship(lazy="joined", init=False)
     album: Mapped[Album] = relationship(lazy="joined", init=False)
@@ -24,7 +34,16 @@ class UserCollection(AlbumTrackerBase, kw_only=True):
     )
 
 
-class UserCard(AlbumTrackerBase, kw_only=True):
+class UserCard(AlbumTrackerBase, TimestampMixin, kw_only=True):
+    """
+    Tracks how many copies of a Card the user has inside a specific UserCollection.
+
+    Examples:
+    - Messi quantity = 1
+    - Neymar Jr quantity = 2
+    - Mbappe quantity = 0 or no row at all
+    """
+
     __table_args__ = (
         UniqueConstraint("user_collection_id", "card_id", name="uq_user_collection_card"),
         CheckConstraint("quantity >= 0", name="ck_user_card_quantity_non_negative"),
