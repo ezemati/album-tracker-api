@@ -17,3 +17,6 @@ run = 'uv run alembic revision --autogenerate -m "${usage_name:?}"'
 
 [tasks."alembic:migrate"]
 run = "uv run alembic upgrade head"
+
+[tasks.seed]
+run = "uv run python -m src.album_tracker_api.seed"

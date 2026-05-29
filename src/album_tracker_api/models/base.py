@@ -1,5 +1,7 @@
+from datetime import datetime
 from uuid import UUID, uuid7
 
+from sqlalchemy import DateTime, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -22,6 +24,17 @@ class AlbumTrackerBase(Base, kw_only=True):
     @declared_attr.directive
     def __tablename__(cls) -> str:
         return pascal_to_snake(cls.__name__)
+
+
+class TimestampMixin(MappedAsDataclass):
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), init=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        init=False,
+    )
 
 
 def pascal_to_snake(text: str) -> str:

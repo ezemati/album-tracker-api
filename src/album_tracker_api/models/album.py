@@ -3,10 +3,19 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AlbumTrackerBase
+from .base import AlbumTrackerBase, TimestampMixin
 
 
-class Album(AlbumTrackerBase, kw_only=True):
+class Album(AlbumTrackerBase, TimestampMixin, kw_only=True):
+    """
+    Represents a pre-loaded album template.
+
+    Example:
+    - FIFA World Cup 2026
+    - UEFA Euro 2024
+    - Pokemon First Generation
+    """
+
     name: Mapped[str] = mapped_column()
     slug: Mapped[str] = mapped_column(unique=True, index=True)
     description: Mapped[str | None] = mapped_column(default=None)
@@ -29,11 +38,27 @@ class Album(AlbumTrackerBase, kw_only=True):
         return section_id in section_ids
 
 
-class AlbumSection(AlbumTrackerBase, kw_only=True):
-    __table_args__ = (UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),)
+class AlbumSection(AlbumTrackerBase, TimestampMixin, kw_only=True):
+    """
+    A section inside an album.
+
+    Example:
+    Album: FIFA World Cup 2026
+    Sections:
+    - Argentina
+    - Brazil
+    - France
+    """
+
+    __table_args__ = (
+        UniqueConstraint("album_id", "name", name="uq_section_album_name"),
+        UniqueConstraint("album_id", "code", name="uq_section_album_code"),
+        UniqueConstraint("album_id", "order_index", name="uq_section_album_order"),
+    )
 
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column()
+    code: Mapped[str] = mapped_column()
     order_index: Mapped[int] = mapped_column()
 
     album: Mapped[Album] = relationship(back_populates="sections", lazy="joined", init=False)
@@ -46,7 +71,16 @@ class AlbumSection(AlbumTrackerBase, kw_only=True):
     )
 
 
-class Card(AlbumTrackerBase, kw_only=True):
+class Card(AlbumTrackerBase, TimestampMixin, kw_only=True):
+    """
+    A card that belongs to an Album and a Section.
+
+    Example:
+    Album: FIFA World Cup 2026
+    Section: Argentina
+    Card: Lionel Messi
+    """
+
     __table_args__ = (
         UniqueConstraint("section_id", "code", name="uq_card_section_code"),
         UniqueConstraint("section_id", "order_index", name="uq_card_section_order"),

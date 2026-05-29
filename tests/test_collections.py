@@ -39,7 +39,7 @@ async def create_section(
     name: str = "Base",
     order_index: int = 1,
 ) -> AlbumSection:
-    section = AlbumSection(album_id=album.id, name=name, order_index=order_index)
+    section = AlbumSection(album_id=album.id, name=name, code=name, order_index=order_index)
     session.add(section)
     await session.commit()
     return section
