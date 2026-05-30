@@ -9,7 +9,7 @@ from ..schemas import (
     AlbumCreateRequest,
     AlbumDetailResponse,
     AlbumSectionCreateRequest,
-    AlbumSectionResponse,
+    AlbumSectionSummaryResponse,
     AlbumSectionUpdateRequest,
     AlbumSummaryResponse,
     AlbumUpdateRequest,
@@ -34,6 +34,31 @@ async def get_album(
     handler: Annotated[AlbumCatalogHandler, Depends()],
 ) -> BaseResponse[AlbumDetailResponse]:
     return BaseResponse(data=await handler.get_album(album_id))
+
+
+@router.get("/{album_id}/summary")
+async def get_album_summary(
+    album_id: UUID,
+    handler: Annotated[AlbumCatalogHandler, Depends()],
+) -> BaseResponse[AlbumSummaryResponse]:
+    return BaseResponse(data=await handler.get_album_summary(album_id))
+
+
+@router.get("/{album_id}/sections")
+async def get_album_sections(
+    album_id: UUID,
+    handler: Annotated[AlbumCatalogHandler, Depends()],
+) -> BaseResponse[list[AlbumSectionSummaryResponse]]:
+    return BaseResponse(data=await handler.get_album_sections(album_id))
+
+
+@router.get("/{album_id}/sections/{section_id}/cards")
+async def get_section_cards(
+    album_id: UUID,
+    section_id: UUID,
+    handler: Annotated[AlbumCatalogHandler, Depends()],
+) -> BaseResponse[list[CardResponse]]:
+    return BaseResponse(data=await handler.get_section_cards(album_id, section_id))
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_admin_user)])
@@ -74,7 +99,7 @@ async def create_section(
     album_id: UUID,
     request: AlbumSectionCreateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-) -> BaseResponse[AlbumSectionResponse]:
+) -> BaseResponse[AlbumSectionSummaryResponse]:
     return BaseResponse(data=await handler.create_section(album_id, request))
 
 
@@ -84,7 +109,7 @@ async def update_section(
     section_id: UUID,
     request: AlbumSectionUpdateRequest,
     handler: Annotated[AlbumAdminHandler, Depends()],
-) -> BaseResponse[AlbumSectionResponse]:
+) -> BaseResponse[AlbumSectionSummaryResponse]:
     return BaseResponse(data=await handler.update_section(album_id, section_id, request))
 
 

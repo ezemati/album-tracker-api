@@ -11,7 +11,7 @@ from album_tracker_api.schemas import (
     AlbumCreateRequest,
     AlbumDetailResponse,
     AlbumSectionCreateRequest,
-    AlbumSectionResponse,
+    AlbumSectionSummaryResponse,
     AlbumSectionUpdateRequest,
     AlbumSummaryResponse,
     AlbumUpdateRequest,
@@ -282,12 +282,11 @@ class TestCreateSection:
         response = await admin_client.post(f"/albums/{album.id}/sections", json=as_json(request))
 
         assert response.status_code == HTTPStatus.CREATED
-        section_response = AlbumSectionResponse.model_validate(response.json()["data"])
+        section_response = AlbumSectionSummaryResponse.model_validate(response.json()["data"])
         saved_section = await session.get(AlbumSection, section_response.id)
         assert saved_section is not None
         assert section_response.album_id == album.id
         assert section_response.name == request.name
-        assert section_response.cards == []
 
     async def test_create_section_rejects_unknown_album(self, admin_client: AsyncClient) -> None:
         request = AlbumSectionCreateRequest(name="Base", code="BAS", order_index=1)
@@ -340,7 +339,7 @@ class TestUpdateSection:
         response = await admin_client.patch(f"/albums/{album.id}/sections/{section.id}", json=as_json(request))
 
         assert response.status_code == HTTPStatus.OK
-        section_response = AlbumSectionResponse.model_validate(response.json()["data"])
+        section_response = AlbumSectionSummaryResponse.model_validate(response.json()["data"])
         await session.refresh(section)
         assert section_response.name == "New"
         assert section_response.order_index == 1

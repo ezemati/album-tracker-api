@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,7 +13,8 @@ from ..schemas import (
     AlbumCreateRequest,
     AlbumDetailResponse,
     AlbumSectionCreateRequest,
-    AlbumSectionResponse,
+    AlbumSectionDetailResponse,
+    AlbumSectionSummaryResponse,
     AlbumSectionUpdateRequest,
     AlbumSummaryResponse,
     AlbumUpdateRequest,
@@ -38,6 +39,30 @@ class AlbumCatalogHandler:
         album = await self.__get_active_album(album_id, load_sections=True)
         return self.__album_detail_response(album)
 
+    async def get_album_summary(self, album_id: UUID) -> AlbumSummaryResponse:
+        album = await self.__get_active_album(album_id, load_sections=False)
+        return AlbumSummaryResponse.from_album(album)
+
+    async def get_album_sections(self, album_id: UUID) -> list[AlbumSectionSummaryResponse]:
+        album = await self.__get_active_album(album_id, load_sections=False)
+        sections = (
+            await self.session.scalars(
+                select(AlbumSection).where(AlbumSection.album_id == album.id).order_by(AlbumSection.order_index.asc())
+            )
+        ).all()
+        return [AlbumSectionSummaryResponse.model_validate(section) for section in sections]
+
+    async def get_section_cards(self, album_id: UUID, section_id: UUID) -> list[CardResponse]:
+        cards = (
+            await self.session.scalars(
+                select(Card)
+                .join(AlbumSection, Card.section_id == AlbumSection.id)
+                .where(and_(AlbumSection.album_id == album_id, AlbumSection.id == section_id))
+                .order_by(Card.order_index.asc())
+            )
+        ).all()
+        return [CardResponse.model_validate(card) for card in cards]
+
     async def __get_active_album(self, album_id: UUID, load_sections: bool = False) -> Album:
         statement = select(Album).where(Album.id == album_id, Album.is_active)
         if load_sections:
@@ -59,8 +84,8 @@ class AlbumCatalogHandler:
             sections=[self.__section_response(section) for section in album.sections],
         )
 
-    def __section_response(self, section: AlbumSection) -> AlbumSectionResponse:
-        return AlbumSectionResponse(
+    def __section_response(self, section: AlbumSection) -> AlbumSectionDetailResponse:
+        return AlbumSectionDetailResponse(
             id=section.id,
             album_id=section.album_id,
             name=section.name,
@@ -95,7 +120,7 @@ class AlbumAdminHandler:
         await self.session.delete(album)
         await self.session.commit()
 
-    async def create_section(self, album_id: UUID, request: AlbumSectionCreateRequest) -> AlbumSectionResponse:
+    async def create_section(self, album_id: UUID, request: AlbumSectionCreateRequest) -> AlbumSectionSummaryResponse:
         _ = await self.__get_album(album_id)
         section = AlbumSection(album_id=album_id, **request.model_dump())
         self.session.add(section)
@@ -108,7 +133,7 @@ class AlbumAdminHandler:
         album_id: UUID,
         section_id: UUID,
         request: AlbumSectionUpdateRequest,
-    ) -> AlbumSectionResponse:
+    ) -> AlbumSectionSummaryResponse:
         section = await self.__get_section(album_id, section_id)
         self.__apply_updates(section, request)
         await self.__commit_or_conflict("Section order already exists in this album")
@@ -212,14 +237,13 @@ class AlbumAdminHandler:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
         return card
 
-    def __section_response(self, section: AlbumSection) -> AlbumSectionResponse:
-        return AlbumSectionResponse(
+    def __section_response(self, section: AlbumSection) -> AlbumSectionSummaryResponse:
+        return AlbumSectionSummaryResponse(
             id=section.id,
             album_id=section.album_id,
             name=section.name,
             code=section.code,
             order_index=section.order_index,
-            cards=[],
         )
 
     async def __commit_or_conflict(self, detail: str) -> None:
