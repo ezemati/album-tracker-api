@@ -2,13 +2,15 @@ from collections.abc import AsyncGenerator, Generator
 from uuid import uuid7
 
 import pytest
+from asgi_lifespan import LifespanManager
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
+from album_tracker_api.app import create_app
 from album_tracker_api.dependencies import get_db
 from album_tracker_api.handlers import create_token, get_password_hash
-from album_tracker_api.main import app
 from album_tracker_api.models import AlbumTrackerBase, User
 
 
@@ -57,6 +59,20 @@ async def session(connection: AsyncConnection) -> AsyncGenerator[AsyncSession]:
 
 
 @pytest.fixture
+async def app(session: AsyncSession) -> AsyncGenerator[FastAPI]:
+    app = create_app(run_seed_data=False)
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    yield app
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
 async def test_user(session: AsyncSession) -> User:
     user = User(
         id=uuid7(),
@@ -84,16 +100,10 @@ async def admin_user(session: AsyncSession) -> User:
 
 
 @pytest.fixture
-async def unauthenticated_client(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
-    async def override_get_db() -> AsyncGenerator[AsyncSession]:
-        yield session
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield client
-
-    app.dependency_overrides.clear()
+async def unauthenticated_client(app: FastAPI) -> AsyncGenerator[AsyncClient]:
+    async with LifespanManager(app) as manager:
+        async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://test") as client:
+            yield client
 
 
 @pytest.fixture
