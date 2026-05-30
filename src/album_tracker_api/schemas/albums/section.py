@@ -18,10 +18,13 @@ class AlbumSectionUpdateRequest(BaseSchema):
     order_index: int | None = None
 
 
-class AlbumSectionResponse(BaseSchema):
+class AlbumSectionSummaryResponse(BaseSchema):
     id: UUID
     album_id: UUID
     name: str
     code: str
     order_index: int
+
+
+class AlbumSectionDetailResponse(AlbumSectionSummaryResponse):
     cards: list[CardResponse] = Field(default_factory=list)

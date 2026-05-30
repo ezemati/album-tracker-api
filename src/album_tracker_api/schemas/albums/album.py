@@ -5,7 +5,7 @@ from pydantic import Field
 
 from ...models import Album
 from ..base import BaseSchema
-from .section import AlbumSectionResponse
+from .section import AlbumSectionDetailResponse
 
 
 class AlbumCreateRequest(BaseSchema):
@@ -46,4 +46,4 @@ class AlbumSummaryResponse(BaseSchema):
 
 
 class AlbumDetailResponse(AlbumSummaryResponse):
-    sections: list[AlbumSectionResponse] = Field(default_factory=list)
+    sections: list[AlbumSectionDetailResponse] = Field(default_factory=list)
