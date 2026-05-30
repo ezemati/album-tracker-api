@@ -10,6 +10,7 @@ lint = { run = "uv run ruff check ." }
 typecheck = { run = "uv run ty check" }
 check = { depends = ["format-check", "lint", "typecheck"] }
 test = { run = "uv run pytest tests" }
+check-test = { depends = ["check", "test"] }
 
 [tasks."alembic:generate"]
 usage = 'arg "<name>" help="Migration name"'

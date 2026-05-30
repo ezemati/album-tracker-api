@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .dependencies import get_db
 from .models import Album, AlbumSection, Card
+from .seeders import world_cup_2026_seed
 
 
 async def seed_albums(session: AsyncSession) -> None:
@@ -64,6 +65,7 @@ async def seed_albums(session: AsyncSession) -> None:
 
 async def seed(session: AsyncSession) -> None:
     await seed_albums(session)
+    await world_cup_2026_seed(session)
 
 
 async def main():
