@@ -10,8 +10,9 @@ wheels/
 .venv
 
 .env
-.env.dev
-.env.prod
+.env.*
+!.env.placeholder
+!.env.ci
 
 # Coverage reports
 .coverage*
