@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, raiseload
+from sqlalchemy.orm import joinedload
 
 from ..dependencies import SessionDep
 from ..models import Album, AlbumSection, Card, User, UserCard, UserCollection
@@ -35,7 +35,6 @@ class UserCollectionHandler:
                     func.count(Card.id).filter(UserCard.quantity > 0).label("owned_cards"),
                     func.count(Card.id).filter(UserCard.quantity >= 2).label("tradable_cards"),
                 )
-                .options(raiseload("*"))
                 .join(Album, UserCollection.album_id == Album.id)
                 # outerjoin() so that Albums without Sections/Cards are included
                 .outerjoin(AlbumSection, Album.id == AlbumSection.album_id)
@@ -162,7 +161,7 @@ class UserCollectionHandler:
         return user_collection
 
     async def __get_album(self, album_id: UUID) -> Album:
-        album = await self.session.get(Album, album_id, options=[raiseload("*")])
+        album = await self.session.get(Album, album_id)
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
@@ -210,7 +209,6 @@ class UserCollectionHandler:
         rows = (
             await self.session.execute(
                 select(Card, func.coalesce(UserCard.quantity, 0))
-                .options(raiseload("*"))
                 .join(AlbumSection, Card.section_id == AlbumSection.id)
                 .outerjoin(
                     UserCard,

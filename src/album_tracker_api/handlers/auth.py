@@ -72,7 +72,7 @@ class AuthHandler:
         )
 
     async def handle_register(self, request: RegisterRequest) -> RegisterResponse:
-        existing_user = (await self.session.scalars(select(User).where(User.email == request.email))).first()
+        existing_user = (await self.session.scalars(select(User).where(User.email == request.email))).one_or_none()
         if existing_user is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -82,7 +82,6 @@ class AuthHandler:
         user = User(email=request.email, password_hash=password_hasher.hash(request.password))
         self.session.add(user)
         await self.session.commit()
-        await self.session.refresh(user)
         return RegisterResponse(user_id=user.id)
 
     async def handle_refresh(self, request: RefreshRequest) -> LoginResponse:
@@ -101,7 +100,7 @@ class AuthHandler:
             raise credentials_exception
 
         user_id = UUID(token_data.sub)
-        user = (await self.session.scalars(select(User).where(User.id == user_id))).first()
+        user = (await self.session.scalars(select(User).where(User.id == user_id))).one_or_none()
         if user is None:
             raise credentials_exception
 
@@ -112,7 +111,7 @@ class AuthHandler:
         )
 
     async def __authenticate_user(self, email: str, password: str) -> User | None:
-        user = (await self.session.scalars(select(User).where(User.email == email))).first()
+        user = (await self.session.scalars(select(User).where(User.email == email))).one_or_none()
         if user is None:
             return None
         if not verify_password(user.password_hash, password):

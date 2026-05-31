@@ -61,7 +61,6 @@ async def create_card(
 
 
 async def create_user_collection(session: AsyncSession, user: User, album: Album) -> UserCollection:
-    # await session.refresh(user)
     user_collection = UserCollection(user_id=user.id, album_id=album.id)
     session.add(user_collection)
     await session.commit()
