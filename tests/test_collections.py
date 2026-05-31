@@ -3,7 +3,7 @@ from uuid import uuid7
 
 from httpx import AsyncClient
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from album_tracker_api.models import Album, AlbumSection, Card, User, UserCard, UserCollection
@@ -121,6 +121,41 @@ class TestListCollections:
         collections = [UserCollectionSummaryResponse.model_validate(item) for item in response.json()["data"]]
         assert [collection.id for collection in collections] == [a_collection.id, z_collection.id]
         assert other_collection.id not in [collection.id for collection in collections]
+
+    async def test_list_collections_uses_bounded_summary_queries(
+        self,
+        client: AsyncClient,
+        session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        album, _, owned_card, tradable_card = await create_album_with_cards(session)
+        user_collection = await create_user_collection(session, test_user, album)
+        await create_user_card(session, user_collection, owned_card, quantity=1)
+        await create_user_card(session, user_collection, tradable_card, quantity=3)
+        session.expunge_all()
+        select_count = 0
+
+        def count_selects(*args: object) -> None:
+            nonlocal select_count
+            statement = str(args[2]).lstrip()
+            if statement.upper().startswith("SELECT"):
+                select_count += 1
+
+        event.listen(session.bind.sync_engine, "before_cursor_execute", count_selects)
+        try:
+            response = await client.get("/collections/")
+        finally:
+            event.remove(session.bind.sync_engine, "before_cursor_execute", count_selects)
+
+        assert response.status_code == HTTPStatus.OK
+        collections = [UserCollectionSummaryResponse.model_validate(item) for item in response.json()["data"]]
+        assert len(collections) == 1
+        assert collections[0].id == user_collection.id
+        assert collections[0].owned_cards == 2
+        assert collections[0].missing_cards == 1
+        assert collections[0].tradable_cards == 1
+        assert collections[0].completion_percentage == 66.67
+        assert select_count <= 2
 
 
 class TestSubscribe:

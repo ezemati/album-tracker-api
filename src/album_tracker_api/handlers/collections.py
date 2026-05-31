@@ -25,15 +25,71 @@ class UserCollectionHandler:
         self.session = session
 
     async def list_collections(self, user: User) -> list[UserCollectionSummaryResponse]:
-        user_collections = (
-            await self.session.scalars(
-                select(UserCollection)
+        rows = (
+            await self.session.execute(
+                select(
+                    UserCollection.id,
+                    UserCollection.created_at,
+                    Album.id,
+                    Album.name,
+                    Album.slug,
+                    Album.description,
+                    Album.year,
+                    Album.is_active,
+                    func.count(Card.id),
+                    func.count(Card.id).filter(UserCard.quantity > 0),
+                    func.count(Card.id).filter(UserCard.quantity >= 2),
+                )
                 .join(Album, UserCollection.album_id == Album.id)
+                .outerjoin(AlbumSection, AlbumSection.album_id == Album.id)
+                .outerjoin(Card, Card.section_id == AlbumSection.id)
+                .outerjoin(
+                    UserCard,
+                    and_(UserCard.card_id == Card.id, UserCard.user_collection_id == UserCollection.id),
+                )
                 .where(UserCollection.user_id == user.id)
+                .group_by(UserCollection.id, Album.id)
                 .order_by(Album.name)
             )
         ).all()
-        return [await self.__build_summary(collection) for collection in user_collections]
+
+        summaries: list[UserCollectionSummaryResponse] = []
+        for row in rows:
+            (
+                collection_id,
+                collection_created_at,
+                album_id,
+                album_name,
+                album_slug,
+                album_description,
+                album_year,
+                album_is_active,
+                total_cards,
+                owned_cards,
+                tradable_cards,
+            ) = row._tuple()
+            missing_cards = total_cards - owned_cards
+            completion_percentage = round((owned_cards / total_cards) * 100, 2) if total_cards else 0
+            summaries.append(
+                UserCollectionSummaryResponse(
+                    id=collection_id,
+                    album=AlbumSummaryResponse(
+                        id=album_id,
+                        name=album_name,
+                        slug=album_slug,
+                        description=album_description,
+                        year=album_year,
+                        is_active=album_is_active,
+                        total_cards=total_cards,
+                    ),
+                    created_at=collection_created_at,
+                    owned_cards=owned_cards,
+                    missing_cards=missing_cards,
+                    tradable_cards=tradable_cards,
+                    completion_percentage=completion_percentage,
+                )
+            )
+        return summaries
 
     async def subscribe(self, user: User, request: SubscribeToAlbumRequest) -> UserCollectionSummaryResponse:
         # ! Allow users to subscribe to the same Album more than once
@@ -123,7 +179,7 @@ class UserCollectionHandler:
         return user_collection
 
     async def __get_album(self, album_id: UUID) -> Album:
-        album = (await self.session.scalars(select(Album).where(Album.id == album_id))).first()
+        album = await self.session.get(Album, album_id)
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
