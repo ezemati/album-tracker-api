@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -31,8 +31,18 @@ class AlbumCatalogHandler:
         self.session = session
 
     async def list_albums(self) -> list[AlbumSummaryResponse]:
-        albums = (await self.session.scalars(select(Album).where(Album.is_active).order_by(Album.name))).all()
-        return [AlbumSummaryResponse.from_album(album) for album in albums]
+        rows = (
+            await self.session.execute(
+                select(Album, func.count(Card.id).label("total_cards"))
+                .outerjoin(AlbumSection, Album.id == AlbumSection.album_id)
+                .outerjoin(Card, AlbumSection.id == Card.section_id)
+                .where(Album.is_active)
+                .group_by(Album.id)
+                .order_by(Album.name)
+            )
+        ).all()
+        rows = [r._tuple() for r in rows]
+        return [AlbumSummaryResponse.from_album(album, total_cards=total_cards) for album, total_cards in rows]
 
     async def get_album(self, album_id: UUID) -> AlbumDetailResponse:
         album = await self.__get_active_album(album_id, load_sections=True)
@@ -42,7 +52,7 @@ class AlbumCatalogHandler:
         statement = select(Album).where(Album.id == album_id, Album.is_active)
         if load_sections:
             statement = statement.options(selectinload(Album.sections).selectinload(AlbumSection.cards))
-        album = (await self.session.scalars(statement)).first()
+        album = (await self.session.scalars(statement)).one_or_none()
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
@@ -80,15 +90,14 @@ class AlbumAdminHandler:
         album = Album(**request.model_dump())
         self.session.add(album)
         await self.__commit_or_conflict("Album data conflicts with an existing album")
-        await self.session.refresh(album)
-        return AlbumSummaryResponse.from_album(album)
+        return AlbumSummaryResponse.from_album(album, total_cards=0)
 
     async def update_album(self, album_id: UUID, request: AlbumUpdateRequest) -> AlbumSummaryResponse:
         album = await self.__get_album(album_id)
         self.__apply_updates(album, request)
         await self.__commit_or_conflict("Album data conflicts with an existing album")
-        await self.session.refresh(album)
-        return AlbumSummaryResponse.from_album(album)
+        total_cards = await self.__get_album_total_cards(album_id)
+        return AlbumSummaryResponse.from_album(album, total_cards=total_cards)
 
     async def delete_album(self, album_id: UUID) -> None:
         album = await self.__get_album(album_id)
@@ -100,7 +109,6 @@ class AlbumAdminHandler:
         section = AlbumSection(album_id=album_id, **request.model_dump())
         self.session.add(section)
         await self.__commit_or_conflict("Section order already exists in this album")
-        await self.session.refresh(section)
         return self.__section_response(section)
 
     async def update_section(
@@ -112,7 +120,6 @@ class AlbumAdminHandler:
         section = await self.__get_section(album_id, section_id)
         self.__apply_updates(section, request)
         await self.__commit_or_conflict("Section order already exists in this album")
-        await self.session.refresh(section)
         return self.__section_response(section)
 
     async def delete_section(self, album_id: UUID, section_id: UUID) -> None:
@@ -121,7 +128,7 @@ class AlbumAdminHandler:
         await self.session.commit()
 
     async def create_card(self, album_id: UUID, request: CardCreateRequest) -> CardResponse:
-        album = await self.__get_album(album_id)
+        album = await self.__get_album(album_id, load_sections=True, load_cards=False)
         if not album.has_section_id(request.section_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -130,7 +137,6 @@ class AlbumAdminHandler:
         card = Card(**request.model_dump())
         self.session.add(card)
         await self.__commit_or_conflict("Card code already exists in this section")
-        await self.session.refresh(card)
         return CardResponse.model_validate(card)
 
     async def create_cards(self, album_id: UUID, request: BulkCardCreateRequest) -> list[CardResponse]:
@@ -157,8 +163,6 @@ class AlbumAdminHandler:
         cards = [Card(**card.model_dump()) for card in request.cards]
         self.session.add_all(cards)
         await self.__commit_or_conflict("One or more card codes already exist in their sections")
-        for card in cards:
-            await self.session.refresh(card)
         return [CardResponse.model_validate(card) for card in cards]
 
     async def update_card(self, album_id: UUID, card_id: UUID, request: CardUpdateRequest) -> CardResponse:
@@ -170,7 +174,7 @@ class AlbumAdminHandler:
                         AlbumSection.album_id == album_id, AlbumSection.id == request.section_id
                     )
                 )
-            ).first()
+            ).one_or_none()
             if section_exists_in_album is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -178,7 +182,6 @@ class AlbumAdminHandler:
                 )
         self.__apply_updates(card, request)
         await self.__commit_or_conflict("Card data conflicts with an existing card")
-        await self.session.refresh(card)
         return CardResponse.model_validate(card)
 
     async def delete_card(self, album_id: UUID, card_id: UUID) -> None:
@@ -186,8 +189,16 @@ class AlbumAdminHandler:
         await self.session.delete(card)
         await self.session.commit()
 
-    async def __get_album(self, album_id: UUID) -> Album:
-        album = (await self.session.scalars(select(Album).where(Album.id == album_id))).first()
+    async def __get_album(self, album_id: UUID, *, load_sections: bool = False, load_cards: bool = False) -> Album:
+        statement = select(Album).where(Album.id == album_id)
+        if load_sections:
+            options = (
+                selectinload(Album.sections).selectinload(AlbumSection.cards)
+                if load_cards
+                else selectinload(Album.sections)
+            )
+            statement = statement.options(options)
+        album = (await self.session.scalars(statement)).one_or_none()
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
@@ -197,7 +208,7 @@ class AlbumAdminHandler:
             await self.session.scalars(
                 select(AlbumSection).where(AlbumSection.album_id == album_id, AlbumSection.id == section_id)
             )
-        ).first()
+        ).one_or_none()
         if section is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
         return section
@@ -207,10 +218,20 @@ class AlbumAdminHandler:
             await self.session.scalars(
                 select(Card).join(AlbumSection).where(AlbumSection.album_id == album_id, Card.id == card_id)
             )
-        ).first()
+        ).one_or_none()
         if card is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
         return card
+
+    async def __get_album_total_cards(self, album_id: UUID) -> int:
+        total_cards = await self.session.scalar(
+            select(func.count(Card.id).label("total_cards"))
+            .join(AlbumSection, Card.section_id == AlbumSection.id)
+            .where(AlbumSection.album_id == album_id)
+        )
+        if total_cards is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
+        return total_cards
 
     def __section_response(self, section: AlbumSection) -> AlbumSectionResponse:
         return AlbumSectionResponse(

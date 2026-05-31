@@ -53,5 +53,5 @@ class UserCard(AlbumTrackerBase, TimestampMixin, kw_only=True):
     card_id: Mapped[UUID] = mapped_column(ForeignKey("card.id", ondelete="CASCADE"), index=True)
     quantity: Mapped[int] = mapped_column(default=0)
 
-    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="joined", init=False)
-    card: Mapped[Card] = relationship(lazy="joined", init=False)
+    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="raise", init=False)
+    card: Mapped[Card] = relationship(lazy="raise", init=False)
