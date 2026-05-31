@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid7
 
-from sqlalchemy import DateTime, inspect
+from sqlalchemy import DateTime, func, inspect
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -41,12 +41,16 @@ class AlbumTrackerBase(Base, kw_only=True):
 
 
 class TimestampMixin(MappedAsDataclass):
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), insert_default=_utc_now, init=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        insert_default=_utc_now,
+        init=False,
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        # default=_utc_now,
-        # server_default=func.now(),
+        server_default=func.now(),
         insert_default=_utc_now,
         onupdate=_utc_now,
         init=False,
