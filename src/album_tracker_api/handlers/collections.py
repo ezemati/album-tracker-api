@@ -28,21 +28,17 @@ class UserCollectionHandler:
         rows = (
             await self.session.execute(
                 select(
-                    UserCollection.id,
-                    UserCollection.created_at,
-                    Album.id,
-                    Album.name,
-                    Album.slug,
-                    Album.description,
-                    Album.year,
-                    Album.is_active,
-                    func.count(Card.id),
-                    func.count(Card.id).filter(UserCard.quantity > 0),
-                    func.count(Card.id).filter(UserCard.quantity >= 2),
+                    UserCollection,
+                    Album,
+                    func.count(Card.id).label("total_cards"),
+                    func.count(Card.id).filter(UserCard.quantity > 0).label("owned_cards"),
+                    func.count(Card.id).filter(UserCard.quantity >= 2).label("tradable_cards"),
                 )
+                .options(raiseload("*"))
                 .join(Album, UserCollection.album_id == Album.id)
-                .outerjoin(AlbumSection, AlbumSection.album_id == Album.id)
-                .outerjoin(Card, Card.section_id == AlbumSection.id)
+                # outerjoin() so that Albums without Sections/Cards are included
+                .outerjoin(AlbumSection, Album.id == AlbumSection.album_id)
+                .outerjoin(Card, AlbumSection.id == Card.section_id)
                 .outerjoin(
                     UserCard,
                     and_(UserCard.card_id == Card.id, UserCard.user_collection_id == UserCollection.id),
@@ -55,40 +51,27 @@ class UserCollectionHandler:
 
         summaries: list[UserCollectionSummaryResponse] = []
         for row in rows:
-            (
-                collection_id,
-                collection_created_at,
-                album_id,
-                album_name,
-                album_slug,
-                album_description,
-                album_year,
-                album_is_active,
-                total_cards,
-                owned_cards,
-                tradable_cards,
-            ) = row._tuple()
+            (user_collection, album, total_cards, owned_cards, tradable_cards) = row._tuple()
             missing_cards = total_cards - owned_cards
             completion_percentage = round((owned_cards / total_cards) * 100, 2) if total_cards else 0
-            summaries.append(
-                UserCollectionSummaryResponse(
-                    id=collection_id,
-                    album=AlbumSummaryResponse(
-                        id=album_id,
-                        name=album_name,
-                        slug=album_slug,
-                        description=album_description,
-                        year=album_year,
-                        is_active=album_is_active,
-                        total_cards=total_cards,
-                    ),
-                    created_at=collection_created_at,
-                    owned_cards=owned_cards,
-                    missing_cards=missing_cards,
-                    tradable_cards=tradable_cards,
-                    completion_percentage=completion_percentage,
-                )
+            summary = UserCollectionSummaryResponse(
+                id=user_collection.id,
+                album=AlbumSummaryResponse(
+                    id=album.id,
+                    name=album.name,
+                    slug=album.slug,
+                    description=album.description,
+                    year=album.year,
+                    is_active=album.is_active,
+                    total_cards=total_cards,
+                ),
+                created_at=user_collection.created_at,
+                owned_cards=owned_cards,
+                missing_cards=missing_cards,
+                tradable_cards=tradable_cards,
+                completion_percentage=completion_percentage,
             )
+            summaries.append(summary)
         return summaries
 
     async def subscribe(self, user: User, request: SubscribeToAlbumRequest) -> UserCollectionSummaryResponse:
