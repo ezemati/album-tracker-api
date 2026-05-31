@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid7
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, func, inspect
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -24,6 +25,9 @@ class AlbumTrackerBase(Base, kw_only=True):
     @declared_attr.directive
     def __tablename__(cls) -> str:
         return pascal_to_snake(cls.__name__)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
 
 
 class TimestampMixin(MappedAsDataclass):

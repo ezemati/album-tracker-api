@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import raiseload
 
 from ..dependencies import SessionDep
 from ..models import Album, AlbumSection, Card, User, UserCard, UserCollection
@@ -154,15 +155,13 @@ class UserCollectionHandler:
         return user_collection
 
     async def __get_user_collection_or_none(self, user: User, user_collection_id: UUID) -> UserCollection | None:
-        user_collection = (
-            await self.session.scalars(
-                select(UserCollection).where(UserCollection.user_id == user.id, UserCollection.id == user_collection_id)
-            )
-        ).first()
+        user_collection = await self.session.get(UserCollection, user_collection_id)
+        if user_collection is None or user_collection.user_id != user.id:
+            return None
         return user_collection
 
     async def __get_album(self, album_id: UUID) -> Album:
-        album = await self.session.get(Album, album_id)
+        album = await self.session.get(Album, album_id, options=[raiseload("*")])
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
@@ -199,6 +198,7 @@ class UserCollectionHandler:
         rows = (
             await self.session.execute(
                 select(Card, func.coalesce(UserCard.quantity, 0))
+                .options(raiseload("*"))
                 .join(AlbumSection, Card.section_id == AlbumSection.id)
                 .outerjoin(
                     UserCard,
@@ -229,7 +229,7 @@ class UserCollectionHandler:
         completion_percentage = round((owned_cards / total_cards) * 100, 2) if total_cards else 0
         return UserCollectionSummaryResponse(
             id=user_collection.id,
-            album=AlbumSummaryResponse.from_album(album),
+            album=AlbumSummaryResponse.from_album(album, total_cards=total_cards),
             created_at=user_collection.created_at,
             owned_cards=owned_cards,
             missing_cards=missing_cards,

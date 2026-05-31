@@ -24,12 +24,12 @@ class UserCollection(AlbumTrackerBase, TimestampMixin, kw_only=True):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
 
-    user: Mapped[User] = relationship(lazy="joined", init=False)
-    album: Mapped[Album] = relationship(lazy="joined", init=False)
+    user: Mapped[User] = relationship(lazy="raise", init=False)
+    album: Mapped[Album] = relationship(lazy="raise", init=False)
     cards: Mapped[list[UserCard]] = relationship(
         back_populates="user_collection",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="raise",
         init=False,
     )
 

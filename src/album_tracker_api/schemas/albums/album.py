@@ -34,7 +34,12 @@ class AlbumSummaryResponse(BaseSchema):
     total_cards: int
 
     @staticmethod
-    def from_album(album: Album) -> AlbumSummaryResponse:
+    def from_album(album: Album, *, total_cards: int | None = None) -> AlbumSummaryResponse:
+        if total_cards is not None:
+            data = album.to_dict()
+            data["total_cards"] = total_cards
+            return AlbumSummaryResponse.model_validate(data)
+
         data: dict[str, Any] = {}
         for field_name in AlbumSummaryResponse.model_fields:
             if field_name == "total_cards":
