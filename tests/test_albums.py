@@ -85,6 +85,7 @@ class TestListAlbums:
         albums = [AlbumSummaryResponse.model_validate(album) for album in response.json()["data"]]
         assert [album.id for album in albums] == [a_album.id, z_album.id]
         assert inactive_album.id not in [album.id for album in albums]
+        assert [album.total_cards for album in albums] == [0, 0]
 
     async def test_list_albums_returns_empty_list(self, client: AsyncClient) -> None:
         response = await client.get("/albums/")

@@ -120,6 +120,7 @@ class TestListCollections:
         collections = [UserCollectionSummaryResponse.model_validate(item) for item in response.json()["data"]]
         assert [collection.id for collection in collections] == [a_collection.id, z_collection.id]
         assert other_collection.id not in [collection.id for collection in collections]
+        assert [collection.owned_cards for collection in collections] == [0, 0]
 
 
 class TestSubscribe:

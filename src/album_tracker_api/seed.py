@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from .dependencies import get_db
 from .models import Album, AlbumSection, Card
@@ -44,7 +45,11 @@ async def seed_albums(session: AsyncSession) -> None:
 
     async def seed_world_cup_2026() -> None:
         world_cup_album = (
-            await session.scalars(select(Album).where(Album.slug == "fake-world-cup-2026"))
+            await session.scalars(
+                select(Album)
+                .options(selectinload(Album.sections).selectinload(AlbumSection.cards))
+                .where(Album.slug == "fake-world-cup-2026")
+            )
         ).one_or_none()
         if world_cup_album is None:
             world_cup_album = Album(
