@@ -81,7 +81,6 @@ async def test_user(session: AsyncSession) -> User:
     )
     session.add(user)
     await session.commit()
-    await session.refresh(user)
     return user
 
 
@@ -95,7 +94,6 @@ async def admin_user(session: AsyncSession) -> User:
     )
     session.add(user)
     await session.commit()
-    await session.refresh(user)
     return user
 
 

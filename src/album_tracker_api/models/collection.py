@@ -24,12 +24,12 @@ class UserCollection(AlbumTrackerBase, TimestampMixin, kw_only=True):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("album.id", ondelete="CASCADE"), index=True)
 
-    user: Mapped[User] = relationship(lazy="joined", init=False)
-    album: Mapped[Album] = relationship(lazy="joined", init=False)
+    user: Mapped[User] = relationship(lazy="raise", init=False)
+    album: Mapped[Album] = relationship(lazy="raise", init=False)
     cards: Mapped[list[UserCard]] = relationship(
         back_populates="user_collection",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="raise",
         init=False,
     )
 
@@ -53,5 +53,5 @@ class UserCard(AlbumTrackerBase, TimestampMixin, kw_only=True):
     card_id: Mapped[UUID] = mapped_column(ForeignKey("card.id", ondelete="CASCADE"), index=True)
     quantity: Mapped[int] = mapped_column(default=0)
 
-    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="joined", init=False)
-    card: Mapped[Card] = relationship(lazy="joined", init=False)
+    user_collection: Mapped[UserCollection] = relationship(back_populates="cards", lazy="raise", init=False)
+    card: Mapped[Card] = relationship(lazy="raise", init=False)

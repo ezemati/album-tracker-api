@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID, uuid7
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, func, inspect
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -16,6 +17,10 @@ class Base(AsyncAttrs, MappedAsDataclass, DeclarativeBase):
     pass
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class AlbumTrackerBase(Base, kw_only=True):
     __abstract__ = True
 
@@ -25,14 +30,29 @@ class AlbumTrackerBase(Base, kw_only=True):
     def __tablename__(cls) -> str:
         return pascal_to_snake(cls.__name__)
 
+    def to_dict(self) -> dict[str, Any]:
+        def get_field_value(name: str) -> Any:
+            print(f"Getting value for field '{name}'")
+            value = getattr(self, name)
+            print(f"Value for field '{name}' is '{value}'")
+            return value
+
+        return {c.key: get_field_value(c.key) for c in inspect(self).mapper.column_attrs}
+
 
 class TimestampMixin(MappedAsDataclass):
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), init=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        insert_default=_utc_now,
+        init=False,
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
-        onupdate=func.now(),
+        insert_default=_utc_now,
+        onupdate=_utc_now,
         init=False,
     )
 

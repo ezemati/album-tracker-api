@@ -29,7 +29,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], sessio
     if token_data.token_type != "access":
         raise credentials_exception
     user_id = UUID(token_data.sub)
-    user = (await session.scalars(select(User).where(User.id == user_id))).first()
+    user = (await session.scalars(select(User).where(User.id == user_id))).one_or_none()
     if user is None:
         raise credentials_exception
     return user

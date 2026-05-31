@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from ..dependencies import SessionDep
 from ..models import Album, AlbumSection, Card, User, UserCard, UserCollection
@@ -25,15 +26,53 @@ class UserCollectionHandler:
         self.session = session
 
     async def list_collections(self, user: User) -> list[UserCollectionSummaryResponse]:
-        user_collections = (
-            await self.session.scalars(
-                select(UserCollection)
+        rows = (
+            await self.session.execute(
+                select(
+                    UserCollection,
+                    Album,
+                    func.count(Card.id).label("total_cards"),
+                    func.count(Card.id).filter(UserCard.quantity > 0).label("owned_cards"),
+                    func.count(Card.id).filter(UserCard.quantity >= 2).label("tradable_cards"),
+                )
                 .join(Album, UserCollection.album_id == Album.id)
+                # outerjoin() so that Albums without Sections/Cards are included
+                .outerjoin(AlbumSection, Album.id == AlbumSection.album_id)
+                .outerjoin(Card, AlbumSection.id == Card.section_id)
+                .outerjoin(
+                    UserCard,
+                    and_(UserCard.card_id == Card.id, UserCard.user_collection_id == UserCollection.id),
+                )
                 .where(UserCollection.user_id == user.id)
+                .group_by(UserCollection.id, Album.id)
                 .order_by(Album.name)
             )
         ).all()
-        return [await self.__build_summary(collection) for collection in user_collections]
+
+        summaries: list[UserCollectionSummaryResponse] = []
+        for row in rows:
+            (user_collection, album, total_cards, owned_cards, tradable_cards) = row._tuple()
+            missing_cards = total_cards - owned_cards
+            completion_percentage = round((owned_cards / total_cards) * 100, 2) if total_cards else 0
+            summary = UserCollectionSummaryResponse(
+                id=user_collection.id,
+                album=AlbumSummaryResponse(
+                    id=album.id,
+                    name=album.name,
+                    slug=album.slug,
+                    description=album.description,
+                    year=album.year,
+                    is_active=album.is_active,
+                    total_cards=total_cards,
+                ),
+                created_at=user_collection.created_at,
+                owned_cards=owned_cards,
+                missing_cards=missing_cards,
+                tradable_cards=tradable_cards,
+                completion_percentage=completion_percentage,
+            )
+            summaries.append(summary)
+        return summaries
 
     async def subscribe(self, user: User, request: SubscribeToAlbumRequest) -> UserCollectionSummaryResponse:
         # ! Allow users to subscribe to the same Album more than once
@@ -42,14 +81,15 @@ class UserCollectionHandler:
         # if existing_user_collection is not None:
         #     return await self.__build_summary(existing_user_collection)
 
-        album = (await self.session.scalars(select(Album).where(Album.id == request.album_id, Album.is_active))).first()
+        album = (
+            await self.session.scalars(select(Album).where(Album.id == request.album_id, Album.is_active))
+        ).one_or_none()
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
 
         user_collection = UserCollection(user_id=user.id, album_id=request.album_id)
         self.session.add(user_collection)
         await self.session.commit()
-        await self.session.refresh(user_collection)
         return await self.__build_summary(user_collection)
 
     async def unsubscribe(self, user: User, user_collection_id: UUID) -> None:
@@ -84,7 +124,7 @@ class UserCollectionHandler:
         user_collection = await self.__get_user_collection_or_raise(user, user_collection_id)
         user_card = await self.__set_quantity(user_collection, card_id, request.quantity)
         await self.session.commit()
-        await self.session.refresh(user_card)
+        user_card = await self.__get_user_card_or_raise(user_collection.id, card_id)
         return self.__user_card_response(user_card.card, user_card.quantity)
 
     async def adjust_card_quantity(
@@ -95,14 +135,14 @@ class UserCollectionHandler:
         request: AdjustCardQuantityRequest,
     ) -> UserCardResponse:
         user_collection = await self.__get_user_collection_or_raise(user, user_collection_id)
-        user_card = await self.__get_user_card(user_collection.id, card_id)
+        user_card = await self.__get_user_card_or_none(user_collection.id, card_id)
         current_quantity = user_card.quantity if user_card is not None else 0
         new_quantity = current_quantity + request.delta
         if new_quantity < 0:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Card quantity cannot be negative")
         user_card = await self.__set_quantity(user_collection, card_id, new_quantity)
         await self.session.commit()
-        await self.session.refresh(user_card)
+        user_card = await self.__get_user_card_or_raise(user_collection_id, card_id)
         return self.__user_card_response(user_card.card, new_quantity)
 
     async def __get_user_collection_or_raise(self, user: User, user_collection_id: UUID) -> UserCollection:
@@ -115,25 +155,34 @@ class UserCollectionHandler:
         return user_collection
 
     async def __get_user_collection_or_none(self, user: User, user_collection_id: UUID) -> UserCollection | None:
-        user_collection = (
-            await self.session.scalars(
-                select(UserCollection).where(UserCollection.user_id == user.id, UserCollection.id == user_collection_id)
-            )
-        ).first()
+        user_collection = await self.session.get(UserCollection, user_collection_id)
+        if user_collection is None or user_collection.user_id != user.id:
+            return None
         return user_collection
 
     async def __get_album(self, album_id: UUID) -> Album:
-        album = (await self.session.scalars(select(Album).where(Album.id == album_id))).first()
+        album = await self.session.get(Album, album_id)
         if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
         return album
 
-    async def __get_user_card(self, user_collection_id: UUID, card_id: UUID) -> UserCard | None:
+    async def __get_user_card_or_none(self, user_collection_id: UUID, card_id: UUID) -> UserCard | None:
         return (
             await self.session.scalars(
-                select(UserCard).where(UserCard.user_collection_id == user_collection_id, UserCard.card_id == card_id)
+                select(UserCard)
+                .options(joinedload(UserCard.card))
+                .where(UserCard.user_collection_id == user_collection_id, UserCard.card_id == card_id)
             )
-        ).first()
+        ).one_or_none()
+
+    async def __get_user_card_or_raise(self, user_collection_id: UUID, card_id: UUID) -> UserCard:
+        user_card = await self.__get_user_card_or_none(user_collection_id, card_id)
+        if user_card is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Card not found in Collection",
+            )
+        return user_card
 
     async def __set_quantity(
         self,
@@ -141,7 +190,7 @@ class UserCollectionHandler:
         card_id: UUID,
         quantity: int,
     ) -> UserCard:
-        user_card = await self.__get_user_card(user_collection.id, card_id)
+        user_card = await self.__get_user_card_or_none(user_collection.id, card_id)
         if user_card is None:
             user_card = UserCard(user_collection_id=user_collection.id, card_id=card_id, quantity=quantity)
             self.session.add(user_card)
@@ -190,7 +239,7 @@ class UserCollectionHandler:
         completion_percentage = round((owned_cards / total_cards) * 100, 2) if total_cards else 0
         return UserCollectionSummaryResponse(
             id=user_collection.id,
-            album=AlbumSummaryResponse.from_album(album),
+            album=AlbumSummaryResponse.from_album(album, total_cards=total_cards),
             created_at=user_collection.created_at,
             owned_cards=owned_cards,
             missing_cards=missing_cards,

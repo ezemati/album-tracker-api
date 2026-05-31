@@ -26,7 +26,7 @@ class Album(AlbumTrackerBase, TimestampMixin, kw_only=True):
         back_populates="album",
         cascade="all, delete-orphan",
         order_by="AlbumSection.order_index",
-        lazy="selectin",
+        lazy="raise",
         init=False,
     )
 
@@ -61,12 +61,12 @@ class AlbumSection(AlbumTrackerBase, TimestampMixin, kw_only=True):
     code: Mapped[str] = mapped_column()
     order_index: Mapped[int] = mapped_column()
 
-    album: Mapped[Album] = relationship(back_populates="sections", lazy="joined", init=False)
+    album: Mapped[Album] = relationship(back_populates="sections", lazy="raise", init=False)
     cards: Mapped[list[Card]] = relationship(
         back_populates="section",
         cascade="all, delete-orphan",
         order_by="Card.order_index",
-        lazy="selectin",
+        lazy="raise",
         init=False,
     )
 
@@ -92,4 +92,4 @@ class Card(AlbumTrackerBase, TimestampMixin, kw_only=True):
     order_index: Mapped[int] = mapped_column()
     image_url: Mapped[str | None] = mapped_column(default=None)
 
-    section: Mapped[AlbumSection] = relationship(back_populates="cards", lazy="joined", init=False)
+    section: Mapped[AlbumSection] = relationship(back_populates="cards", lazy="raise", init=False)
